@@ -1,8 +1,42 @@
 <html>
     <head>
         <link rel="stylesheet" type="text/css" href="/assets/css/base.css" />
+
+        <script src="/assets/js/jquery-2.0.0.js"></script>
     </head>
     <body>
         <h1>hmmm dummy stuff</h1>
+
+        <div id="out"></div>
+
+        <script>
+
+            function out(str) {
+                var p = $('<p>').text(str);
+                $('#out').append(p);
+            }
+
+            //Create the connection.
+            var socket = Ti.Network.createTCPSocket("talk.google.com", 5222);
+
+            socket.onRead(function(message) {
+                out(message);
+            });
+
+            socket.connect();
+
+
+            var testMsg = "<?xml version=\"1.0\"?>\
+    <stream:stream\
+    to=\"example.com\"\
+    xmlns=\"jabber:client\"\
+    xmlns:stream=\"http://etherx.jabber.org/streams\"\
+    version=\"1.0\">";
+
+            setTimeout(function() {
+                out("Send message");
+                socket.write(testMsg);
+            }, 2000);
+        </script>
     </body>
 </html>
