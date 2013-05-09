@@ -1,0 +1,14 @@
+/* Tide has an older webkit so we have use old gradient syntax :(  */
+body {
+    background-image: -webkit-gradient(
+        linear,
+        left bottom,
+        left top,
+        color-stop(1, rgb(0,0,0)),
+        color-stop(0, rgb(255,255,255))
+    );
+}
+
+h1 {
+    color: red;
+}
