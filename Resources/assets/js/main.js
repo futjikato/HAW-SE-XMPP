@@ -16,12 +16,15 @@ requirejs.config({
 });
 
 // load jquery
-require([ "jquery" ], function($) {
+require([ "jquery", "net/Client" ], function($, Client) {
     // wait for DOM ready
     $(function() {
 
         //TODO do stuff here
         console.log("System is ready and waiting for your orders.");
+
+        // test xmpp client
+        var c = new Client('jabber-server.de', '5222', 'jabber-server.de')
 
     });
 });
