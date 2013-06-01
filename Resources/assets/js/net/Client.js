@@ -1,4 +1,4 @@
-define([ "net/Network", "jquery" ], function(Network, $) {
+define([ "net/Network", "jquery", "Mustache", "Filesystem" ], function(Network, $, Mustache, Filesystem) {
     /**
      * This is the XMPP Client.
      * It uses the Network class which is an abstraction of the network possibilities
@@ -6,7 +6,7 @@ define([ "net/Network", "jquery" ], function(Network, $) {
      *
      * @constructor
      */
-    function Client(server, port, hostName, secret) {
+    function Client(server, port, hostName) {
 
         /**
          * Network instance to work with.
@@ -31,15 +31,15 @@ define([ "net/Network", "jquery" ], function(Network, $) {
          */
         this.userToken = null;
 
-        /**
-         * The shared secret ( APP ID ??? ) used to make a handshake
-         *
-         * @type {String}
-         */
-        this.secret = secret;
+        this.authHandle = null;
 
         // initialize client
-        this._init();
+        var self = this;
+        // use timeout of 1500 ms because of TideSDK bug
+        // https://github.com/TideSDK/TideSDK/issues/13
+        setTimeout(function() {
+            self._init();
+        }, 1500);
     }
 
     /**
@@ -52,26 +52,34 @@ define([ "net/Network", "jquery" ], function(Network, $) {
      * @private
      */
     Client.prototype._init = function() {
-        var self = this,
-            saluteMessage = '<?xml version="1.0"?>\
-<stream:stream to="' + this.hostName + '"\
-    xmlns:stream="http://etherx.jabber.org/streams"\
-    xmlns="jabber:client"\
-    version="1.0" />';
+        var self = this;
 
-        // first contact with server. Ask for stream ID
-        function salute() {
-            this.network.send(saluteMessage, function(response) {
-                var response = $(response);
-                if(response && response.attr('id')) {
-                    var key = self._createHandshakeKey(response.attr('id'));
-                }
-            });
-        }
+        // load xml message template
+        var saluteMessage = Filesystem.getXmlTemplate('salute');
+        // render template with server url
+        saluteMessage = Mustache.render(saluteMessage, {url: self.hostName});
 
-        // start with a nice salute
-        salute();
+        // send message to server
+        var str = '';
+        self.network.send(saluteMessage, function(response) {
+            // the callback function can be triggered multiple times !
+            str += response.toString();
+
+            var jqResponse = $(str);
+            if(jqResponse.find('mechanisms').length > 0) {
+                self._selectAuthMethod(jqResponse);
+            }
+        });
     }
+
+    Client.prototype._selectAuthMethod = function(jqElem) {
+        var availableMechanisms = [];
+        jqElem.find('mechanisms').children().each(function() {
+            availableMechanisms.push($(this).text());
+        });
+
+        console.dir(availableMechanisms);
+    };
 
     /**
      * Authenticate a user with the server.

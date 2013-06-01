@@ -11,7 +11,8 @@
 requirejs.config({
     baseUrl: '/assets/js',
     paths: {
-        jquery: '/libs/jquery/jquery-2.0.0'
+        jquery: '/libs/jquery/jquery-2.0.0',
+        Mustache: '/libs/mustache.js/mustache'
     }
 });
 
@@ -24,7 +25,8 @@ require([ "jquery", "net/Client" ], function($, Client) {
         console.log("System is ready and waiting for your orders.");
 
         // test xmpp client
-        var c = new Client('jabber-server.de', '5222', 'jabber-server.de')
-
+        $('#go').on('click', function() {
+            var c = new Client('chat.facebook.com', 5222, 'chat.facebook.com');
+        });
     });
 });
