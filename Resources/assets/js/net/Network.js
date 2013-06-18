@@ -11,7 +11,7 @@ define(function() {
         this.socket = Ti.Network.createTCPSocket(ip, port);
 
         this.socket.onError(function(err) {
-            console.err(err.toString());
+            console.error(err.toString());
         });
 
         this.socket.connect();
@@ -28,7 +28,7 @@ define(function() {
     Network.prototype.send = function(message, callback) {
 
         if(this.socket.isClosed()) {
-            console.err('Socket closed unexpected.');
+            console.error('Socket closed unexpected.');
             return;
         }
 

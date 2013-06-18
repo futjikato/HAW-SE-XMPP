@@ -25,8 +25,8 @@ require([ "jquery", "net/Client" ], function($, Client) {
         console.log("System is ready and waiting for your orders.");
 
         // test xmpp client
-        $('#go').on('click', function() {
-            var c = new Client('jabber.ccc.de', 5222, 'jabber.ccc.de');
+        $('#connect').on('click', function() {
+            var c = new Client($("#host").val(), parseInt($("#port").val()), $("#host").val(), $("#username").val(), $("#password").val());
         });
     });
 });

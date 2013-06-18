@@ -6,7 +6,7 @@ define([ "net/Network", "jquery", "Mustache", "Filesystem" ], function(Network, 
      *
      * @constructor
      */
-    function Client(server, port, hostName) {
+    function Client(server, port, hostName, username, password) {
 
         /**
          * Network instance to work with.
@@ -22,6 +22,19 @@ define([ "net/Network", "jquery", "Mustache", "Filesystem" ], function(Network, 
          * @type {String}
          */
         this.hostName = hostName;
+
+        /**
+         * Authentication identity
+         *
+         * @type {String}
+         */
+        this.username = username;
+
+        /**
+         * Password
+         * @type {String}
+         */
+        this.password = password;
 
         /**
          * After authentication with the server the client will receive a token.
@@ -59,13 +72,15 @@ define([ "net/Network", "jquery", "Mustache", "Filesystem" ], function(Network, 
         // render template with server url
         saluteMessage = Mustache.render(saluteMessage, {url: self.hostName});
 
-        // send message to server
-        var str = '';
-        self.network.send(saluteMessage, function(response) {
-            // the callback function can be triggered multiple times !
-            str += response.toString();
+        // onRead muss komplett umgebaut werden
+        var wut = 0;
 
-            var jqResponse = $(str);
+        // send message to server
+        self.network.send(saluteMessage, function(response) {
+            if (wut == 2) return; else wut++;
+
+            // the callback function can be triggered multiple times !
+            var jqResponse = $(response.toString());
             if(jqResponse.find('mechanisms').length > 0) {
                 self._selectAuthMethod(jqResponse);
             }
@@ -79,7 +94,7 @@ define([ "net/Network", "jquery", "Mustache", "Filesystem" ], function(Network, 
         });
 
         console.dir(availableMechanisms);
-        this.auth("foo", "bar");
+        this.auth(this.username, this.password);
     };
 
     /**
@@ -90,20 +105,36 @@ define([ "net/Network", "jquery", "Mustache", "Filesystem" ], function(Network, 
      * @return boolean
      */
     Client.prototype.auth = function(username, password) {
-
-        // TODO Ti.Codec.encodeBase64 ends at a FUCKING \0 BULLSHIT !!!
-        //var data = "foo\0foo\0bar";
-        //data = Ti.Codec.encodeBase64(data);
-        var data = "Zm9vAGZvbwBiYXI=";
+        var self = this;
+        var data = btoa("\0" + this.username + "\0" + this.password);
 
         var authMsg = Filesystem.getXmlTemplate('auth');
         // render template with server url
         authMsg = Mustache.render(authMsg, {mechanism: "PLAIN", data: data});
 
+
+        // win
+        var wut = false;
+        var is = false;
+        var dis = false;
+        var shiat = false;
+        console.log("yo");
         // send message to server
-        this.network.send(authMsg, function(response) {
-            // the callback function can be triggered multiple times !
-            console.log(response.toString());
+        this.network.send(authMsg, function() {
+            if (wut) return; else wut = true;
+            console.log("yoyo");
+            self.network.send(Mustache.render(Filesystem.getXmlTemplate('salute'), {url: self.hostName}), function() {
+                if (is) return; else is = true;
+                self.network.send('<iq type="set" id="sd1"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><resource>Pandion</resource></bind></iq>', function() {
+                    if (dis) return; else dis = true;
+                    self.network.send('<iq type="set" id="sd2" to="jabber.ccc.de"><session xmlns="urn:ietf:params:xml:ns:xmpp-session"/></iq>', function() {
+                        if (shiat) return; else shiat = true;
+                        self.network.send('<presence><x xmlns="jabber:x:avatar"><hash>fea759d5f9f52b795d35dae169dbfcd0b8e5585b</hash></x><priority>8</priority></presence><iq type="set" id="sd10"><query xmlns="jabber:iq:privacy"><list name="invisible"><item action="deny" order="1"><presence-out/></item></list></query></iq>', function() {
+                            console.log("online!");
+                        });
+                    });
+                });
+            });
         });
     };
 

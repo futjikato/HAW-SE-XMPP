@@ -4,8 +4,8 @@ body {
         linear,
         left bottom,
         left top,
-        color-stop(1, rgb(0,0,0)),
-        color-stop(0, rgb(255,255,255))
+        color-stop(1, rgb(255,255,255)),
+        color-stop(0, rgb(0,0,0))
     );
 }
 
