@@ -79,6 +79,7 @@ define([ "net/Network", "jquery", "Mustache", "Filesystem" ], function(Network, 
         });
 
         console.dir(availableMechanisms);
+        this.auth("foo", "bar");
     };
 
     /**
@@ -90,6 +91,20 @@ define([ "net/Network", "jquery", "Mustache", "Filesystem" ], function(Network, 
      */
     Client.prototype.auth = function(username, password) {
 
+        // TODO Ti.Codec.encodeBase64 ends at a FUCKING \0 BULLSHIT !!!
+        //var data = "foo\0foo\0bar";
+        //data = Ti.Codec.encodeBase64(data);
+        var data = "Zm9vAGZvbwBiYXI=";
+
+        var authMsg = Filesystem.getXmlTemplate('auth');
+        // render template with server url
+        authMsg = Mustache.render(authMsg, {mechanism: "PLAIN", data: data});
+
+        // send message to server
+        this.network.send(authMsg, function(response) {
+            // the callback function can be triggered multiple times !
+            console.log(response.toString());
+        });
     };
 
     return Client;

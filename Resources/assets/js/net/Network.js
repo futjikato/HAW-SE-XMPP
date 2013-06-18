@@ -32,6 +32,8 @@ define(function() {
             return;
         }
 
+        console.log(message);
+
         this.socket.onRead(callback);
         this.socket.write(message);
     };

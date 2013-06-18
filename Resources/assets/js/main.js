@@ -26,7 +26,7 @@ require([ "jquery", "net/Client" ], function($, Client) {
 
         // test xmpp client
         $('#go').on('click', function() {
-            var c = new Client('chat.facebook.com', 5222, 'chat.facebook.com');
+            var c = new Client('jabber.ccc.de', 5222, 'jabber.ccc.de');
         });
     });
 });
