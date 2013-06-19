@@ -112,23 +112,12 @@ define([ "net/Network", "jquery", "Mustache", "Filesystem" ], function(Network, 
         // render template with server url
         authMsg = Mustache.render(authMsg, {mechanism: "PLAIN", data: data});
 
-
-        // win
-        var wut = false;
-        var is = false;
-        var dis = false;
-        var shiat = false;
-        console.log("yo");
         // send message to server
         this.network.send(authMsg, function() {
-            if (wut) return; else wut = true;
             console.log("yoyo");
             self.network.send(Mustache.render(Filesystem.getXmlTemplate('salute'), {url: self.hostName}), function() {
-                if (is) return; else is = true;
                 self.network.send('<iq type="set" id="sd1"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><resource>Pandion</resource></bind></iq>', function() {
-                    if (dis) return; else dis = true;
                     self.network.send('<iq type="set" id="sd2" to="jabber.ccc.de"><session xmlns="urn:ietf:params:xml:ns:xmpp-session"/></iq>', function() {
-                        if (shiat) return; else shiat = true;
                         self.network.send('<presence><x xmlns="jabber:x:avatar"><hash>fea759d5f9f52b795d35dae169dbfcd0b8e5585b</hash></x><priority>8</priority></presence><iq type="set" id="sd10"><query xmlns="jabber:iq:privacy"><list name="invisible"><item action="deny" order="1"><presence-out/></item></list></query></iq>', function() {
                             console.log("online!");
                         });

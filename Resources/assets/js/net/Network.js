@@ -7,11 +7,29 @@ define(function() {
      * @constructor
      */
     function Network(ip, port) {
+        var self = this;
+
+        /**
+         * Current read function to be called for every read on socket
+         * If unbound use default
+         */
+        this.currRead = function(){};
+
         // create socket
         this.socket = Ti.Network.createTCPSocket(ip, port);
 
         this.socket.onError(function(err) {
             console.error(err.toString());
+        });
+
+        this.socket.onRead(function(data) {
+            if(typeof self.currRead == 'function') {
+                self.currRead(data.toString());
+            } else {
+                // fallback
+                console.log("NO READ FUNCTION EXISTING !");
+                console.log(data.toString());
+            }
         });
 
         this.socket.connect();
@@ -34,7 +52,7 @@ define(function() {
 
         console.log(message);
 
-        this.socket.onRead(callback);
+        this.currRead = callback;
         this.socket.write(message);
     };
 
