@@ -1,0 +1,27 @@
+{
+  "name": "HAW-SE-XMPP",
+  "version": "0.0.1",
+  "homepage": "https://github.com/futjikato/HAW-SE-XMPP",
+  "authors": [
+    "HAW SE Teamnahme"
+  ],
+  "description": "XMPP chat client",
+  "main": "index.html",
+  "keywords": [
+    "xmpp",
+    "chat"
+  ],
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery": "~2.0.3",
+    "bootstrap": "~3.0.0"
+  }
+}

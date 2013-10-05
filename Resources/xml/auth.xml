@@ -1,1 +1,0 @@
-<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="{{mechanism}}">{{data}}</auth>
