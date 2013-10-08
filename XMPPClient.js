@@ -42,26 +42,32 @@ var proto = XMPPClient.prototype;
  *  Nothing.
  */
 proto._init = function() {
-	console.log('Connecting to ' + this._opts.host + ' on port ' + this._opts.port);	
+	console.log('Connecting to ' + this._opts.host + ' on port ' +
+			this._opts.port);	
 	var sock = net.connect(this._opts);
 	var stream = sax.createStream(true);
-	
 	// Setup SAX event handlers.
 	var that = this;
-	
 	stream.on('opentag', function(node) {
 		that._saxOnOpentag.call(that, node);
 	});
 	stream.on('closetag', function(node) {
 		that._saxOnClosetag.call(that, node);
 	});
-	
-	sock.pipe(stream);
+	stream.on('text', function(text) {
+		that._saxOnText.call(that, text);
+	});
+	sock.pipe(stream).pipe(process.stdout);
 	this._sock = sock;
 	this._stream = stream;
 	sock.once('connect',
-		function() { that._negotiateStream.call(that); }
+		function() {
+			that.emit('connect');
+			that._negotiateStream.call(that);
+		}
 	);
+	
+	this._serverOpts = {};
 };
 
 /**
@@ -75,6 +81,13 @@ proto._init = function() {
  *  Nothing.
  */
 proto._saxOnOpentag = function(node) {
+	// Keep track of nested tags.
+	if(this._tags === undefined)
+		this._tags = [];
+	if(this._openTag !== undefined)
+		this._tags.push(this._openTag);
+	this._openTag = node.name;
+	
 	if(this._pendingError === true)
 		this._errorId = node.name;
 	
@@ -96,29 +109,54 @@ proto._saxOnOpentag = function(node) {
  *  Nothing.
  */
 proto._saxOnClosetag = function(node) {
+	this._openTag = this._tags.pop();
+		
 	if(node.match(/stream:stream/i) !== null) {
 		this.emit('closed',
-				require('./XMPPErrorConditions')
-				[this._errorId]
+			require('./XMPPErrorConditions')
+			[this._errorId]
 		);
 	}
 };
 
+proto._saxOnText = function(text) {
+	switch(this._openTag.toLowerCase()) {
+	// Parse SASL mechanism advertised by server.
+	case 'mechanism':
+		if(this._serverOpts.mechanisms === undefined)
+			this._serverOpts.mechanisms = [];
+		this._serverOpts.mechanisms.push(text);
+		console.log('Server supports SASL mechanism ' + text);
+		break;
+	}
+}
+
 /**
- * Attempts to negotiate the initial stream with the receiving entity.
+ * Attempts to negotiate the initial XML stream with the server.
  */
 proto._negotiateStream = function() {
-	var msg = json2xml({
+	this._write({
 		'stream:stream': '',
 		attr: {
-			'to': this._opts.jid,
+			'to': this._opts.host,
+			'from': this._opts.jid,
 			'xmlns': 'jabber:client',
 			'xmlns:stream': 'http://etherx.jabber.org/streams',
 			'version': '1.0'
 		}
-	}, { header: true, attributes_key: 'attr' });
-	
-	this._sock.write(msg);
+	}, { header: true, dontClose: true });	
+};
+
+proto._write = function(json, opts) {
+	if(opts === null)
+		opts = {};
+	if(json.attr !== undefined)
+		opts.attributes_key = 'attr';
+	var xml = json2xml(json, opts);
+	if(opts.dontClose === true)
+		xml = xml.replace(/\/>$/, '>');
+	console.log('C -> ' + xml);
+	this._sock.write(xml);
 };
 
 proto.connect = function() {

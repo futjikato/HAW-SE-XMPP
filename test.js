@@ -4,12 +4,16 @@ var xmpp = require('./xmpp');
 
 var client = xmpp.create({
 	host: 'jabber.se',
-	jid: 'hello@world.de',
+	jid: 'brezelbube@jabber.se',
 	useSSL: true
 });
 
 client.on('closed', function(reason) {
 	console.log('I have been disconnected: ' + reason);
+});
+
+client.on('connect', function() {
+	console.log('Connected to server...');
 });
 
 client.connect();
