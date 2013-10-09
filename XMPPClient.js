@@ -100,7 +100,8 @@ proto._init = function() {
 	stream.on('text', function(text) {
 		that._saxOnText.call(that, text);
 	});
-	sock.pipe(stream).pipe(process.stdout);
+//	sock.pipe(stream).pipe(process.stdout);
+	sock.pipe(stream);	
 	this._sock = sock;
 	this._stream = stream;
 	sock.once('connect',
@@ -203,7 +204,6 @@ proto._saxOnText = function(text) {
 		// Parse SASL mechanism advertised by server.
 		case 'mechanism':
 			this._serverOpts.saslMechanisms.push(text);
-			console.log(this._serverOpts.saslMechanisms);
 			break;
 		}		
 	}
@@ -235,22 +235,33 @@ proto._startAuthentication = function() {
 	//  2. Digest-Md5
 	//  3. Plain
 	// --> TODO.
+	this.saslMechanism = 'PLAIN';
 	
 	// Give user a chance to override preferred SASL mechanism.
 	this.emit('pickSASLMechanism', this._serverOpts.saslMechanisms);
 	
-	// testing...
-	this.saslMechanism = 'PLAIN';
+	//  Lookup SASL plugin. If does not exist -> failure
+	//  instantiate sasl mechanism.
+	//  if mechanism is client initiated, send data along with
+	//  auth tag.
+	var fs = require('fs');
+	var name = this.saslMechanism.charAt(0).toUpperCase() +
+		this.saslMechanism.toLowerCase().slice(1);
+	if(fs.existsSync('./SASL' + name + '.js') === false)
+		throw new XMPPException('SASL mechanism not found');
+	
+	var mechanism = require('./SASL' + name);
+	// Todo: save instance
+	var instance = new mechanism(this._opts.jid, this._opts.password);
+	var initial = instance.hasInitial ? instance.getResponse() : '';
+		
 	this._write({
-		'auth': new Buffer("\0" + this._opts.jid + "\0" +
-				this._opts.password).toString('base64'),
+		'auth': new Buffer(initial).toString('base64'),
 		'attr': {
 			'xmlns': 'urn:ietf:params:xml:ns:xmpp-sasl',
 			'mechanism': this.saslMechanism
 		}
-	});
-	
-	// Invoke and delegate to SASL plugin
+	});	
 };
 
 proto._write = function(json, opts) {
@@ -260,7 +271,7 @@ proto._write = function(json, opts) {
 	var xml = json2xml(json, opts);
 	if(opts.dontClose === true)
 		xml = xml.replace(/\/>$/, '>');
-	console.log('C -> ' + xml);
+//	console.log('C -> ' + xml);
 	this._sock.write(xml);
 };
 

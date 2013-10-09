@@ -1,5 +1,4 @@
 
-
 var xmpp = require('./xmpp');
 
 var client = xmpp.create({
@@ -20,9 +19,6 @@ client.on('connect', function() {
 client.on('pickSASLMechanism', function(mechanisms) {
 	console.log('Server supports following SASL mechanisms:');
 	console.log(mechanisms);
-	
-	
 });
 
 client.connect();
-
