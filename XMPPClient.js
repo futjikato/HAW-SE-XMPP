@@ -27,6 +27,11 @@ var defaultOpts = {
 function XMPPClient(opts) {
 	// jsnode events boilerplate.
 	events.EventEmitter.call(this);
+	
+	/**
+	 * The SASL mechanism to use during authentication.
+	 */
+	this.saslMechanism = null;
 
 	/**
 	 * The set of options passed into the constructor.
@@ -142,6 +147,17 @@ proto._saxOnOpentag = function(node) {
 			break;
 		}
 	}
+	else if(this._state == XMPPState.authenticating) {
+		switch(tag) {
+		case 'failure':
+			console.log('SASL authentication failed.');
+			break;
+			
+		case 'success':
+			console.log('SASL authentication completed.');
+			break;
+		}
+	}
 };
 
 /**
@@ -186,12 +202,12 @@ proto._saxOnText = function(text) {
 		switch(tag) {
 		// Parse SASL mechanism advertised by server.
 		case 'mechanism':
-			this._serverOpts.saslMechanisms.push(text.toLowerCase());
+			this._serverOpts.saslMechanisms.push(text);
 			console.log(this._serverOpts.saslMechanisms);
 			break;
 		}		
 	}
-}
+};
 
 /**
  * Attempts to negotiate the initial XML stream with the server.
@@ -214,14 +230,31 @@ proto._negotiateStream = function() {
 proto._startAuthentication = function() {
 	this._state = XMPPState.authenticating;
 	
-	// Fixme: Give user a chance to pick preferred SASL mechanism.
+	// Pick the best mechanism:
+	//  1. Scram-Sha-1
+	//  2. Digest-Md5
+	//  3. Plain
+	// --> TODO.
+	
+	// Give user a chance to override preferred SASL mechanism.
 	this.emit('pickSASLMechanism', this._serverOpts.saslMechanisms);
 	
+	// testing...
+	this.saslMechanism = 'PLAIN';
+	this._write({
+		'auth': new Buffer("\0" + this._opts.jid + "\0" +
+				this._opts.password).toString('base64'),
+		'attr': {
+			'xmlns': 'urn:ietf:params:xml:ns:xmpp-sasl',
+			'mechanism': this.saslMechanism
+		}
+	});
+	
+	// Invoke and delegate to SASL plugin
 };
 
 proto._write = function(json, opts) {
-	if(opts === null)
-		opts = {};
+	opts = opts || {};
 	if(json.attr !== undefined)
 		opts.attributes_key = 'attr';
 	var xml = json2xml(json, opts);

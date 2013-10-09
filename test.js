@@ -5,6 +5,7 @@ var xmpp = require('./xmpp');
 var client = xmpp.create({
 	host: 'jabber.se',
 	jid: 'brezelbube@jabber.se',
+	password: 'brezel',
 	useSSL: true
 });
 
@@ -19,6 +20,8 @@ client.on('connect', function() {
 client.on('pickSASLMechanism', function(mechanisms) {
 	console.log('Server supports following SASL mechanisms:');
 	console.log(mechanisms);
+	
+	
 });
 
 client.connect();
