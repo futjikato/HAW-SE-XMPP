@@ -32,6 +32,11 @@ function XMPPClient(opts) {
 	 * The SASL mechanism to use during authentication.
 	 */
 	this.saslMechanism = null;
+	
+	/**
+	 * The instance of the SASL mechanism plugin used for authentication.
+	 */
+	this._saslInstance = null;
 
 	/**
 	 * The set of options passed into the constructor.
@@ -100,8 +105,8 @@ proto._init = function() {
 	stream.on('text', function(text) {
 		that._saxOnText.call(that, text);
 	});
-//	sock.pipe(stream).pipe(process.stdout);
-	sock.pipe(stream);	
+	sock.pipe(stream).pipe(process.stdout);
+//	sock.pipe(stream);	
 	this._sock = sock;
 	this._stream = stream;
 	sock.once('connect',
@@ -207,6 +212,13 @@ proto._saxOnText = function(text) {
 			break;
 		}		
 	}
+	else if(this._state == XMPPState.authenticating) {
+		switch(tag) {
+		case 'challenge':
+			this._continueAuthentication(text);
+			break;
+		}
+	}
 };
 
 /**
@@ -235,7 +247,7 @@ proto._startAuthentication = function() {
 	//  2. Digest-Md5
 	//  3. Plain
 	// --> TODO.
-	this.saslMechanism = 'PLAIN';
+	this.saslMechanism = 'DIGEST-MD5';
 	
 	// Give user a chance to override preferred SASL mechanism.
 	this.emit('pickSASLMechanism', this._serverOpts.saslMechanisms);
@@ -252,8 +264,9 @@ proto._startAuthentication = function() {
 	
 	var mechanism = require('./SASL' + name);
 	// Todo: save instance
-	var instance = new mechanism(this._opts.jid, this._opts.password);
-	var initial = instance.hasInitial ? instance.getResponse() : '';
+	this._saslInstance = new mechanism(this._opts.jid, this._opts.password);
+	var initial = this._saslInstance.hasInitial ?
+			this._saslInstance.getResponse() : '';
 		
 	this._write({
 		'auth': new Buffer(initial).toString('base64'),
@@ -264,6 +277,15 @@ proto._startAuthentication = function() {
 	});	
 };
 
+proto._continueAuthentication = function(challenge) {
+	// Base64 decode challenge.
+	challenge = new Buffer(challenge, 'base64').toString('ascii');
+	// Hand to SASL instance and get challenge response.
+	var response = this._saslInstance.getResponse(challenge);
+	// Base64 encode response.
+	console.log('Got server challenge: ' + challenge);	
+}
+
 proto._write = function(json, opts) {
 	opts = opts || {};
 	if(json.attr !== undefined)
@@ -271,7 +293,7 @@ proto._write = function(json, opts) {
 	var xml = json2xml(json, opts);
 	if(opts.dontClose === true)
 		xml = xml.replace(/\/>$/, '>');
-//	console.log('C -> ' + xml);
+	console.log('C -> ' + xml);
 	this._sock.write(xml);
 };
 
