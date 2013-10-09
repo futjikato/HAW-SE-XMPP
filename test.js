@@ -16,5 +16,10 @@ client.on('connect', function() {
 	console.log('Connected to server...');
 });
 
+client.on('pickSASLMechanism', function(mechanisms) {
+	console.log('Server supports following SASL mechanisms:');
+	console.log(mechanisms);
+});
+
 client.connect();
 

@@ -4,7 +4,15 @@ var net = require('net');
 var sax = require('sax');
 var json2xml = require('json2xml');
 
+var XMPPState = require('./XMPPState');
+var XMPPException = require('./XMPPException');
+
+/**
+ * A set of default options which is merged with the options passed
+ * into the constructor.
+ */
 var defaultOpts = {
+	// Default XMPP port.
 	port: 5222
 };
 
@@ -19,9 +27,37 @@ var defaultOpts = {
 function XMPPClient(opts) {
 	// jsnode events boilerplate.
 	events.EventEmitter.call(this);
+
+	/**
+	 * The set of options passed into the constructor.
+	 */
+	this._opts = require('extend')(defaultOpts, opts);	
 	
-	// mandatory options: host
-	this._opts = require('extend')(defaultOpts, opts);
+	/**
+	 * The state the XMPPClient is currently in.
+	 */
+	this._state = null;
+	
+	/**
+	 * A set of server options populated during stream-negotiation.
+	 */
+	this._serverOpts = {
+		/**
+		 * A list of SASL mechanisms supported by the server.
+		 */
+		saslMechanisms: [],
+		
+		/**
+		 * True if the server supports TLS via STARTTLS.
+		 */
+		startTls: false,
+		
+		/**
+		 * True if STARTTLS is mandatory before authentication can be
+		 * performed.
+		 */
+		startTlsMandatory: false
+	};
 	
 	if(opts.autoConnect === true)
 		this._init();
@@ -43,7 +79,9 @@ var proto = XMPPClient.prototype;
  */
 proto._init = function() {
 	console.log('Connecting to ' + this._opts.host + ' on port ' +
-			this._opts.port);	
+			this._opts.port);
+	this._state = XMPPState.connecting;
+	
 	var sock = net.connect(this._opts);
 	var stream = sax.createStream(true);
 	// Setup SAX event handlers.
@@ -65,9 +103,7 @@ proto._init = function() {
 			that.emit('connect');
 			that._negotiateStream.call(that);
 		}
-	);
-	
-	this._serverOpts = {};
+	);	
 };
 
 /**
@@ -96,6 +132,16 @@ proto._saxOnOpentag = function(node) {
 		this._pendingError = true;
 	else
 		this._pendingError = false;
+	
+	var tag = this._openTag.toLowerCase();
+	// Look for tags sent during stream-negotiating.
+	if(this._state == XMPPState.negotiatingStream) {
+		switch(tag) {
+		case 'starttls':
+			this._serverOpts.startTls = true;
+			break;
+		}
+	}
 };
 
 /**
@@ -109,6 +155,7 @@ proto._saxOnOpentag = function(node) {
  *  Nothing.
  */
 proto._saxOnClosetag = function(node) {
+	var tag = node.toLowerCase();
 	this._openTag = this._tags.pop();
 		
 	if(node.match(/stream:stream/i) !== null) {
@@ -117,17 +164,32 @@ proto._saxOnClosetag = function(node) {
 			[this._errorId]
 		);
 	}
+	
+	if(this._state == XMPPState.negotiatingStream) {
+		switch(tag) {
+		// Server has sent its set of features. Continue with TLS or
+		// SASL negotiation.
+		case 'stream:features':
+			if(this._serverOpts.startTlsMandatory === true)
+				throw new XMPPException('STARTTLS not yet implemented.');
+			// Go on with SASL authentication.
+			this._startAuthentication();
+			break;
+		}
+	}
 };
 
 proto._saxOnText = function(text) {
-	switch(this._openTag.toLowerCase()) {
-	// Parse SASL mechanism advertised by server.
-	case 'mechanism':
-		if(this._serverOpts.mechanisms === undefined)
-			this._serverOpts.mechanisms = [];
-		this._serverOpts.mechanisms.push(text);
-		console.log('Server supports SASL mechanism ' + text);
-		break;
+	var tag = this._openTag.toLowerCase();
+	// Look for text sent during stream-negotiating.
+	if(this._state == XMPPState.negotiatingStream) {
+		switch(tag) {
+		// Parse SASL mechanism advertised by server.
+		case 'mechanism':
+			this._serverOpts.saslMechanisms.push(text.toLowerCase());
+			console.log(this._serverOpts.saslMechanisms);
+			break;
+		}		
 	}
 }
 
@@ -135,6 +197,8 @@ proto._saxOnText = function(text) {
  * Attempts to negotiate the initial XML stream with the server.
  */
 proto._negotiateStream = function() {
+	this._state = XMPPState.negotiatingStream;
+	
 	this._write({
 		'stream:stream': '',
 		attr: {
@@ -145,6 +209,14 @@ proto._negotiateStream = function() {
 			'version': '1.0'
 		}
 	}, { header: true, dontClose: true });	
+};
+
+proto._startAuthentication = function() {
+	this._state = XMPPState.authenticating;
+	
+	// Fixme: Give user a chance to pick preferred SASL mechanism.
+	this.emit('pickSASLMechanism', this._serverOpts.saslMechanisms);
+	
 };
 
 proto._write = function(json, opts) {
