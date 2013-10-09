@@ -3,6 +3,7 @@ var events = require('events');
 var net = require('net');
 var sax = require('sax');
 var json2xml = require('json2xml');
+var sasl = require('./sasl/sasl');
 
 var XMPPState = require('./XMPPState');
 var XMPPException = require('./XMPPException');
@@ -239,35 +240,33 @@ proto._negotiateStream = function() {
 	}, { header: true, dontClose: true });	
 };
 
+/**
+ * Initiates the SASL authentication exchange.
+ * 
+ * @this
+ *  Reference to the XMPPClient instance.
+ */
 proto._startAuthentication = function() {
 	this._state = XMPPState.authenticating;
-	
-	// Pick the best mechanism:
+	// Pick the best mechanism available:
 	//  1. Scram-Sha-1
 	//  2. Digest-Md5
 	//  3. Plain
 	// --> TODO.
-	this.saslMechanism = 'DIGEST-MD5';
+	this.saslMechanism = 'PLAIN';
 	
-	// Give user a chance to override preferred SASL mechanism.
+	// Give user a chance to override preferred mechanism.
 	this.emit('pickSASLMechanism', this._serverOpts.saslMechanisms);
 	
-	//  Lookup SASL plugin. If does not exist -> failure
-	//  instantiate sasl mechanism.
-	//  if mechanism is client initiated, send data along with
-	//  auth tag.
-	var fs = require('fs');
-	var name = this.saslMechanism.charAt(0).toUpperCase() +
-		this.saslMechanism.toLowerCase().slice(1);
-	if(fs.existsSync('./SASL' + name + '.js') === false)
-		throw new XMPPException('SASL mechanism not found');
+	// Fixme: Throw exception if mechanism is not implemented.
+	this._saslInstance = sasl.create(this.saslMechanism);
 	
-	var mechanism = require('./SASL' + name);
-	// Todo: save instance
-	this._saslInstance = new mechanism(this._opts.jid, this._opts.password);
+	// Add jid and password to mechanism's properties.
+	this._saslInstance.add('username', this._opts.jid);
+	this._saslInstance.add('password', this._opts.password);
+	
 	var initial = this._saslInstance.hasInitial ?
-			this._saslInstance.getResponse() : '';
-		
+			this._saslInstance.getResponse() : '';	
 	this._write({
 		'auth': new Buffer(initial).toString('base64'),
 		'attr': {
@@ -284,7 +283,8 @@ proto._continueAuthentication = function(challenge) {
 	var response = this._saslInstance.getResponse(challenge);
 	// Base64 encode response.
 	console.log('Got server challenge: ' + challenge);	
-}
+	// Hand challenge response to server.
+};
 
 proto._write = function(json, opts) {
 	opts = opts || {};

@@ -1,5 +1,4 @@
 
-
 var xmpp = require('./xmpp');
 
 var client = xmpp.create({
@@ -23,4 +22,3 @@ client.on('pickSASLMechanism', function(mechanisms) {
 });
 
 client.connect();
-

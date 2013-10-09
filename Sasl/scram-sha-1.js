@@ -1,4 +1,7 @@
-function SASLScramSha1(username, password) {
+var mechanism = require('./mechanism');
+var util = require('util');
+
+function scramsha1(username, password) {
 	this.username = username;
 	this.password = password;
 	
@@ -18,13 +21,14 @@ function SASLScramSha1(username, password) {
 	this._step = 0;
 }
 
-var proto = SASLScramSha1.prototype;
+util.inherits(scramsha1, mechanism);
+var proto = scramsha1.prototype;
 
 proto.getResponse = function(challenge) {
 	if(this._step === 0)
 		return this._computeInitialResponse();
-	
-	return "\0" + this.username + "\0" + this.password;	
+
+	throw new Error('Not implemented.');
 };
 
 proto._computeInitialResponse = function() {
@@ -40,4 +44,4 @@ proto._saslPrep = function(s) {
 	.replace(/\,/, "=2C");
 };
 
-module.exports = SASLScramSha1;
+module.exports = scramsha1;
