@@ -2,6 +2,9 @@ var mechanism = require('../mechanism');
 var util = require('util');
 var crypto = require('crypto');
 
+/**
+ * Implements the SCRAM-SHA-1 SASL authentication mechanism.
+ */
 function scramsha1() {	
 	/**
 	 * True if the mechanisms requires initiation by the client. 
@@ -51,7 +54,6 @@ var proto = scramsha1.prototype;
  *  The client-response to the specified server-challenge.
  */
 proto.getResponse = function(challenge) {
-		
 	if (this._step == 2)
 		this._isCompleted = true;
 	var ret = this._step === 0 ? this._computeInitialResponse() :
@@ -67,8 +69,15 @@ proto.getResponse = function(challenge) {
  * 
  * @returns
  *  The initial-response-string to be sent to the server.
+ * @throws Error
+ *  Thrown if the username and/or password properties have not
+ *  been set.
  */
 proto._computeInitialResponse = function() {
+	if(this._properties.username == null)
+		throw new Error('The "username" property must be set.');
+	if(this._properties.password == null)
+		throw new Error('The "password" property must be set.');
 	var username = this._properties.username;
 	var ret = "n,,n=" + this._saslPrep(username) + ",r=" +
 		this._cnonce;
@@ -84,8 +93,12 @@ proto._computeInitialResponse = function() {
  *  to the initial client response.
  * @returns
  *  The client's challenge response.
+ * @exception Error
+ *  Thrown if the challenge parameter is null or undefined.
  */
 proto._computeFinalResponse = function(challenge) {
+	if(challenge == null)
+		throw new Error('challenge must not be null.');
 	var username = this._properties.username;
 	var password = this._properties.password;
 	var nv = this._parseServerFirstMessage(challenge);
@@ -99,7 +112,7 @@ proto._computeFinalResponse = function(challenge) {
 		serverFirstMessage = challenge,
 		withoutProof = "c=" + (new Buffer('n,,').toString('base64')) + ",r=" +
 			nonce;
-	
+	// Needed later on to verify server's signature.
 	this._authMessage = clientFirstBare + "," + serverFirstMessage + "," +
 		withoutProof;
 	this._saltedPassword = this._hi(password, salt, iterationCount);
@@ -107,7 +120,7 @@ proto._computeFinalResponse = function(challenge) {
 		storedKey = this._h(clientKey),
 		clientSignature = this._hmac(storedKey, this._authMessage),
 		clientProof = this._xor(clientKey, clientSignature);
-	
+	// Construct the client final message.
 	return withoutProof + ",p=" + (new Buffer(clientProof).toString('base64'));
 };
 
@@ -120,8 +133,12 @@ proto._computeFinalResponse = function(challenge) {
  * @returns
  *  The client's response to the server. This will be an empty string if
  *  verification was successful or any other value to indicate failure.
+ * @exception Error
+ *  Thrown if the challenge parameter is null or undefined.
  */
 proto._verifyServerSignature = function(challenge) {
+	if(challenge == null)
+		throw new Error('challenge must not be null.');
 	// The server must respond with a "v=signature" message.
 	if (challenge.indexOf("v=") !== 0) {
 		// Cancel authentication process.
@@ -154,8 +171,21 @@ proto._verifyServerSignature = function(challenge) {
  * @returns
  *  An array of bytes containing the result of the computation
  *  of the "Hi()"-formula.
+ * @exception Error
+ *  Thrown if any of the arguments is null or undefined or if
+ *  the count parameter is not of type integer.
  */
 proto._hi = function(password, salt, count) {
+	if(password == null)
+		throw new Error('password must not be null.');
+	if(salt == null)
+		throw new Error('salt must not be null.');
+	if(count == null)
+		throw new Error('count must not be null.');
+	// count must be an actual integer, otherwise pbkdf2Sync
+	// complains about it.
+	if(typeof count !== 'number' || count % 1 != 0)
+		throw new Error('count must be an integer.');
 	var saltBytes = new Buffer(salt, 'base64');	
 	return crypto.pbkdf2Sync(password, saltBytes, count, 20);
 };
@@ -170,8 +200,14 @@ proto._hi = function(password, salt, count) {
  *  The input to compute the hashcode for.
  * @returns
  *  The hashcode of the specified input data as an array of bytes.
+ * @exception Error
+ *  Thrown if either argument is null or undefined.
  */
 proto._hmac = function(key, data) {
+	if(key == null)
+		throw new Error('key must not be null.');
+	if(data == null)
+		throw new Error('data must not be null.');
 	return crypto.createHmac('sha1', key).update(data).digest();
 };
 
@@ -182,8 +218,12 @@ proto._hmac = function(key, data) {
  *  The data to hash.
  * @returns
  *  The hash value as an array of bytes for the specified data.
+ * @exception Error
+ *  Thrown if the data argument is null or undefined.
  */
 proto._h = function(data) {
+	if(data == null)
+		throw new Error('data must not be null.');
 	return crypto.createHash('sha1').update(data).digest();	
 };
 
@@ -198,8 +238,15 @@ proto._h = function(data) {
  * @returns
  *  An array of bytes of the same length as the input arrays containing
  *  the result of the exclusive-or operation.
+ * @exception Error
+ *  Thrown if either argument is null or undefined or if both
+ *  arguments are not of the same length.
  */
 proto._xor = function(a, b) {
+	if(a == null)
+		throw new Error('a must not be null.');
+	if(b == null)
+		throw new Error('b must not be null.');
 	if(a.length != b.length)
 		throw new Error('Arrays must be of same length.');
 	var ret = [];
@@ -215,8 +262,12 @@ proto._xor = function(a, b) {
  *  The nonce value sent by the server as part of the server-first-message.
  * @returns
  *  True if the nonce value is valid, otherwise false.
+ * @exception Error
+ *  Thrown if the nonce parameter is null or undefined.
  */
 proto._verifyServerNonce = function(nonce) {
+	if(nonce == null)
+		throw new Error('nonce must not be null.');
 	return nonce.indexOf(this._cnonce) === 0;
 };
 
@@ -228,8 +279,12 @@ proto._verifyServerNonce = function(nonce) {
  * @returns
  *  An object containing key/value pairs extracted from the
  *  server message.
+ * @exception Error
+ *  Thrown if the challenge parameter is null or undefined.
  */
 proto._parseServerFirstMessage = function(challenge) {
+	if(challenge == null)
+		throw new Error('challenge must not be null.');
 	var coll = {};
 	var p = challenge.split(',');
 	for(var i in p) {
@@ -253,11 +308,15 @@ proto._parseServerFirstMessage = function(challenge) {
  *  The string to SASL-prepare.
  * @returns
  *  The SASL prep'd string.
+ * @exception Error
+ *  Thrown if the parameter s is null or undefined.
  */
 proto._saslPrep = function(s) {
+	if(s == null)
+		throw new Error('s must not be null.');
 	return s
-	.replace(/=/, "=3D")
-	.replace(/\,/, "=2C");
+		.replace(/=/, "=3D")
+		.replace(/\,/, "=2C");
 };
 
 /**
@@ -268,8 +327,11 @@ proto._saslPrep = function(s) {
  *  A random "cnonce-value" string.
  */
 proto._generateCnonce = function() {
-	// Fixme: generate a proper client-nonce.
-	return "fyko+d2lbbFgONRv9qkxdawL";
+    var s = '';
+    var c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for(var i = 0; i < 24; i++)
+        s += c.charAt(Math.floor(Math.random() * c.length));
+    return s;	
 };
 
 module.exports = scramsha1;
