@@ -19,11 +19,26 @@ function scramsha1() {
 	this._step = 0;
 	
 	/**
-	 * 
+	 * The client nonce value used during authentication.
 	 */
 	this._cnonce = this._generateCnonce();
+	
+	/**
+	 * The salted password hash. This is populated during the authentication
+	 * exchange.
+	 */
+	this._saltedPassword = null;
+	
+	/**
+	 * The auth message component of the algorithm. This is populated during
+	 * the authentication exchange.
+	 */
+	this._authMessage = null;
 }
 
+/**
+ * Inherit from mechanism base class.
+ */
 util.inherits(scramsha1, mechanism);
 var proto = scramsha1.prototype;
 
@@ -57,7 +72,6 @@ proto._computeInitialResponse = function() {
 	var username = this._properties.username;
 	var ret = "n,,n=" + this._saslPrep(username) + ",r=" +
 		this._cnonce;
-	console.log(ret);
 	return ret;
 };
 
@@ -76,8 +90,8 @@ proto._computeFinalResponse = function(challenge) {
 	var password = this._properties.password;
 	var nv = this._parseServerFirstMessage(challenge);
 	// Extract the server data needed to calculate the client proof.
-	var salt = nv["s"], nonce = nv["r"];
-	var iterationCount = nv["i"];
+	var salt = nv.s, nonce = nv.r;
+	var iterationCount = nv.i;
 	if (!this._verifyServerNonce(nonce))
 		throw new Error("Invalid server nonce: " + nonce);
 	// Calculate the client proof (refer to RFC 5802, p.7).
@@ -86,13 +100,45 @@ proto._computeFinalResponse = function(challenge) {
 		withoutProof = "c=" + (new Buffer('n,,').toString('base64')) + ",r=" +
 			nonce;
 	
-	var authMessage = clientFirstBare + "," + serverFirstMessage + "," +
+	this._authMessage = clientFirstBare + "," + serverFirstMessage + "," +
 		withoutProof;
-	var saltedPassword = this._hi(password, salt, iterationCount);
-	var clientKey = this._hmac(saltedPassword, 'Client Key'),
+	this._saltedPassword = this._hi(password, salt, iterationCount);
+	var clientKey = this._hmac(this._saltedPassword, 'Client Key'),
 		storedKey = this._h(clientKey),
-		clientSignature = this._hmac(storedKey, authMessage),
+		clientSignature = this._hmac(storedKey, this._authMessage),
 		clientProof = this._xor(clientKey, clientSignature);
+	
+	return withoutProof + ",p=" + (new Buffer(clientProof).toString('base64'));
+};
+
+/**
+ * Verifies the server signature which is sent by the server as the final
+ * step of the authentication process.
+ * 
+ * @param challenge
+ *  The server signature.
+ * @returns
+ *  The client's response to the server. This will be an empty string if
+ *  verification was successful or any other value to indicate failure.
+ */
+proto._verifyServerSignature = function(challenge) {
+	// The server must respond with a "v=signature" message.
+	if (challenge.indexOf("v=") !== 0) {
+		// Cancel authentication process.
+		return 'invalid';
+	}
+	var serverSignature = new Buffer(challenge.substring(2), 'base64');
+	// Verify server's signature.
+	var serverKey = this._hmac(this._saltedPassword, "Server Key");
+	var	calculatedSignature = this._hmac(serverKey, this._authMessage);
+	// If both signatures are equal, server has been authenticated. Otherwise
+	// cancel the authentication process.
+	for(var i = 0; i < serverSignature.length; i++) {
+		if(serverSignature[i] != calculatedSignature[i])
+			return 'invalid';
+	}
+	// The empty string indicates successful authentication.
+	return '';
 };
 
 /**
@@ -109,7 +155,7 @@ proto._computeFinalResponse = function(challenge) {
  *  An array of bytes containing the result of the computation
  *  of the "Hi()"-formula.
  */
-proto._hi = function() {
+proto._hi = function(password, salt, count) {
 	var saltBytes = new Buffer(salt, 'base64');	
 	return crypto.pbkdf2Sync(password, saltBytes, count, 20);
 };
@@ -154,8 +200,13 @@ proto._h = function(data) {
  *  the result of the exclusive-or operation.
  */
 proto._xor = function(a, b) {
-	
-}
+	if(a.length != b.length)
+		throw new Error('Arrays must be of same length.');
+	var ret = [];
+	for(var i = 0; i < a.length; i++)
+		ret[i] = a[i] ^ b[i];
+	return ret;
+};
 
 /**
  * Verifies the nonce value sent by the server.
@@ -190,6 +241,8 @@ proto._parseServerFirstMessage = function(challenge) {
 			s.substring(delimiter + 1);
 		coll[name] = value;
 	}
+	if(coll.i !== undefined)
+		coll.i = parseInt(coll.i, 10);
 	return coll;
 };
 
@@ -215,6 +268,7 @@ proto._saslPrep = function(s) {
  *  A random "cnonce-value" string.
  */
 proto._generateCnonce = function() {
+	// Fixme: generate a proper client-nonce.
 	return "fyko+d2lbbFgONRv9qkxdawL";
 };
 

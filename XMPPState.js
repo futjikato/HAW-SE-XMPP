@@ -16,5 +16,10 @@ module.exports = {
 	/**
 	 * SASL authentication is being performed.
 	 */
-	authenticating: 2
+	authenticating: 2,
+	
+	/**
+	 * User has been authenticated.
+	 */
+	authenticated: 3
 };

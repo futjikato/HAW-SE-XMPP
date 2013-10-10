@@ -106,8 +106,8 @@ proto._init = function() {
 	stream.on('text', function(text) {
 		that._saxOnText.call(that, text);
 	});
-	sock.pipe(stream).pipe(process.stdout);
-//	sock.pipe(stream);	
+//	sock.pipe(stream).pipe(process.stdout);
+	sock.pipe(stream);	
 	this._sock = sock;
 	this._stream = stream;
 	sock.once('connect',
@@ -161,7 +161,7 @@ proto._saxOnOpentag = function(node) {
 			break;
 			
 		case 'success':
-			this._completeAuthentication();
+//			this._completeAuthentication();
 			break;
 		}
 	}
@@ -217,6 +217,9 @@ proto._saxOnText = function(text) {
 		switch(tag) {
 		case 'challenge':
 			this._continueAuthentication(text);
+			break;
+		case 'success':
+			this._completeAuthentication(text);
 			break;
 		}
 	}
@@ -276,23 +279,62 @@ proto._startAuthentication = function() {
 	});	
 };
 
+/**
+ * Continues the SASL authentication exchange.
+ * 
+ * @param challenge
+ *  The challenge sent by the server.
+ * @returns
+ *  Nothing.
+ */
 proto._continueAuthentication = function(challenge) {
 	// Base64 decode challenge.
 	challenge = new Buffer(challenge, 'base64').toString('ascii');
-	console.log('Got server challenge: ' + challenge);		
 	// Hand to SASL instance and get challenge response.
 	var response = this._saslInstance.getResponse(challenge);
 	// Base64 encode response.
-	
+	response = new Buffer(response).toString('base64');
 	// Hand challenge response to server.
+	this._write({
+		'response': response,
+		attr: {
+			'xmlns': 'urn:ietf:params:xml:ns:xmpp-sasl'
+		}
+	});
 };
 
-proto._completeAuthentication = function() {
+/**
+ * Completes the authentication exchange.
+ * 
+ * @param challenge
+ *  The final challenge sent by the server. This is optional and may
+ *  be omitted if the chosen mechanism does not require a final
+ *  server challenge.
+ * @returns
+ *  Nothing.
+ */
+proto._completeAuthentication = function(challenge) {
+	// The challenge is optional.
+	if(challenge !== undefined) {
+		challenge = new Buffer(challenge, 'base64').toString('ascii');
+		// Hand to SASL instance and get challenge response.
+		var response = this._saslInstance.getResponse(challenge);
+		// If response is not the empty string, abort the authentication exchange.
+		if(response !== '') {
+			this._write({
+				'abort': '',
+				attr: {
+					'xmlns': 'urn:ietf:params:xml:ns:xmpp-sasl'
+				}
+			});
+			throw new XMPPException('Authentication abortd.');
+		}
+	}
+	
 	console.log('SASL authentication completed.');
-	
-	// Now in authenticated state.
-	
-	
+	// Switch to authenticated state.
+	this._state = XMPPState.authenticated;
+	this.emit('authenticated');
 };
 
 proto._write = function(json, opts) {
@@ -302,7 +344,7 @@ proto._write = function(json, opts) {
 	var xml = json2xml(json, opts);
 	if(opts.dontClose === true)
 		xml = xml.replace(/\/>$/, '>');
-	console.log('C -> ' + xml);
+//	console.log('C -> ' + xml);
 	this._sock.write(xml);
 };
 
