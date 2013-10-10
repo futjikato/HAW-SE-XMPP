@@ -1,4 +1,4 @@
-var mechanism = require('./mechanism');
+var mechanism = require('../mechanism');
 var util = require('util');
 
 function plain() {	

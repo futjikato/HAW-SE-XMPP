@@ -2,9 +2,14 @@
 var xmpp = require('./xmpp');
 
 var client = xmpp.create({
+/*	
 	host: 'jabber.se',
 	jid: 'brezelbube@jabber.se',
 	password: 'brezel',
+*/
+	host: 'twattle.net',
+	jid: 'twat20',
+	password: 'twat20',
 	useSSL: true
 });
 

@@ -161,7 +161,7 @@ proto._saxOnOpentag = function(node) {
 			break;
 			
 		case 'success':
-			console.log('SASL authentication completed.');
+			this._completeAuthentication();
 			break;
 		}
 	}
@@ -253,7 +253,7 @@ proto._startAuthentication = function() {
 	//  2. Digest-Md5
 	//  3. Plain
 	// --> TODO.
-	this.saslMechanism = 'PLAIN';
+	this.saslMechanism = 'SCRAM-SHA-1';
 	
 	// Give user a chance to override preferred mechanism.
 	this.emit('pickSASLMechanism', this._serverOpts.saslMechanisms);
@@ -279,11 +279,20 @@ proto._startAuthentication = function() {
 proto._continueAuthentication = function(challenge) {
 	// Base64 decode challenge.
 	challenge = new Buffer(challenge, 'base64').toString('ascii');
+	console.log('Got server challenge: ' + challenge);		
 	// Hand to SASL instance and get challenge response.
 	var response = this._saslInstance.getResponse(challenge);
 	// Base64 encode response.
-	console.log('Got server challenge: ' + challenge);	
+	
 	// Hand challenge response to server.
+};
+
+proto._completeAuthentication = function() {
+	console.log('SASL authentication completed.');
+	
+	// Now in authenticated state.
+	
+	
 };
 
 proto._write = function(json, opts) {
@@ -302,7 +311,10 @@ proto.connect = function() {
 };
 
 proto.close = function() {
-	// close xml stream.
+	// Closing the XML document initiates the shutdown.
+	var xml = '</stream:stream>';
+	console.log('C -> ' + xml);	
+	this._sock.write(xml);
 };
 
 module.exports = XMPPClient;
