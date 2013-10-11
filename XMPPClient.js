@@ -4,9 +4,9 @@ var net = require('net');
 var sax = require('sax');
 var json2xml = require('json2xml');
 var sasl = require('./sasl/sasl');
+var starttls = require('starttls');
 
 var XMPPState = require('./XMPPState');
-var XMPPException = require('./XMPPException');
 
 /**
  * A set of default options which is merged with the options passed
@@ -50,6 +50,11 @@ function XMPPClient(opts) {
 	this._state = null;
 	
 	/**
+	 * True if TLS encryption has been negotiated via STARTTLS.
+	 */
+	this._tlsEnabled = false;
+	
+	/**
 	 * A set of server options populated during stream-negotiation.
 	 */
 	this._serverOpts = {
@@ -74,8 +79,10 @@ function XMPPClient(opts) {
 		this._init();
 }
 
+/**
+ * Inherit from EventEmitter.
+ */
 util.inherits(XMPPClient, events.EventEmitter);
-
 var proto = XMPPClient.prototype;
 
 /**
@@ -106,14 +113,14 @@ proto._init = function() {
 	stream.on('text', function(text) {
 		that._saxOnText.call(that, text);
 	});
-//	sock.pipe(stream).pipe(process.stdout);
-	sock.pipe(stream);	
+	sock.pipe(stream).pipe(process.stdout);
+//	sock.pipe(stream);	
 	this._sock = sock;
-	this._stream = stream;
+	this._saxStream = stream;
 	sock.once('connect',
 		function() {
 			that.emit('connect');
-			that._negotiateStream.call(that);
+			that._negotiateStream.call(that, true);
 		}
 	);	
 };
@@ -146,11 +153,27 @@ proto._saxOnOpentag = function(node) {
 		this._pendingError = false;
 	
 	var tag = this._openTag.toLowerCase();
-	// Look for tags sent during stream-negotiating.
+	
+	// FIXME: Refactor into dispatch methods?
 	if(this._state == XMPPState.negotiatingStream) {
 		switch(tag) {
 		case 'starttls':
 			this._serverOpts.startTls = true;
+			break;
+		}
+	}
+	else if(this._state == XMPPState.negotiatingTls) {
+		switch(tag) {
+		case 'proceed':
+			this._sock.unpipe(this._saxStream);
+			var that = this;
+			starttls(this._sock, function() {
+				that._sock = this.cleartext;
+				that._sock.pipe(that._saxStream);
+				that._tlsEnabled = true;
+				// Need to start over with stream negotiation.
+				that._negotiateStream(false);
+			});
 			break;
 		}
 	}
@@ -193,15 +216,28 @@ proto._saxOnClosetag = function(node) {
 		// Server has sent its set of features. Continue with TLS or
 		// SASL negotiation.
 		case 'stream:features':
-			if(this._serverOpts.startTlsMandatory === true)
-				throw new XMPPException('STARTTLS not yet implemented.');
-			// Go on with SASL authentication.
-			this._startAuthentication();
+			if(this._serverOpts.startTls === true) {
+				if(this._tlsEnabled === true)
+					this._startAuthentication();			
+				else
+					this._startTls();
+			}
+			else {
+				// If server does not support STARTTLS, go on with
+				// SASL authentication.
+				this._startAuthentication();
+			}
 			break;
 		}
 	}
 };
 
+/**
+ * Callback invoked when a text node has been parsed.
+ * 
+ * @param text
+ *  The text of the parsed node.
+ */
 proto._saxOnText = function(text) {
 	var tag = this._openTag.toLowerCase();
 	// Look for text sent during stream-negotiating.
@@ -227,8 +263,11 @@ proto._saxOnText = function(text) {
 
 /**
  * Attempts to negotiate the initial XML stream with the server.
+ * 
+ * @param xmlHeader
+ *  Set to true to send XML header.
  */
-proto._negotiateStream = function() {
+proto._negotiateStream = function(xmlHeader) {
 	this._state = XMPPState.negotiatingStream;
 	
 	this._write({
@@ -240,7 +279,20 @@ proto._negotiateStream = function() {
 			'xmlns:stream': 'http://etherx.jabber.org/streams',
 			'version': '1.0'
 		}
-	}, { header: true, dontClose: true });	
+	}, { header: xmlHeader, dontClose: true });	
+};
+
+/**
+ * Initiates TLS negotiation via the STARTTLS extension.
+ */
+proto._startTls = function() {
+	this._state = XMPPState.negotiatingTls;
+	this._write({
+		'starttls': '',
+		attr: {
+			'xmlns': 'urn:ietf:params:xml:ns:xmpp-tls'
+		}
+	});
 };
 
 /**
@@ -327,7 +379,7 @@ proto._completeAuthentication = function(challenge) {
 					'xmlns': 'urn:ietf:params:xml:ns:xmpp-sasl'
 				}
 			});
-			throw new XMPPException('Authentication abortd.');
+			throw new Error('Authentication aborted.');
 		}
 	}
 	
@@ -337,6 +389,14 @@ proto._completeAuthentication = function(challenge) {
 	this.emit('authenticated');
 };
 
+/**
+ * Serializes the specified object into XML and sends it to the server.
+ * 
+ * @param json
+ *  The object to send to the server as serialized XML.
+ * @param opts
+ *  A set of serialization options.
+ */
 proto._write = function(json, opts) {
 	opts = opts || {};
 	if(json.attr !== undefined)
@@ -344,7 +404,7 @@ proto._write = function(json, opts) {
 	var xml = json2xml(json, opts);
 	if(opts.dontClose === true)
 		xml = xml.replace(/\/>$/, '>');
-//	console.log('C -> ' + xml);
+	console.log('C -> ' + xml);
 	this._sock.write(xml);
 };
 
@@ -352,6 +412,9 @@ proto.connect = function() {
 	this._init();
 };
 
+/**
+ * Closes the connection to the server.
+ */
 proto.close = function() {
 	// Closing the XML document initiates the shutdown.
 	var xml = '</stream:stream>';

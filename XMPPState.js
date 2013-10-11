@@ -14,12 +14,17 @@ module.exports = {
 	negotiatingStream: 1,
 	
 	/**
+	 * TLS encryption is being negotiated with the server.
+	 */
+	negotiatingTls: 2,
+	
+	/**
 	 * SASL authentication is being performed.
 	 */
-	authenticating: 2,
+	authenticating: 3,
 	
 	/**
 	 * User has been authenticated.
 	 */
-	authenticated: 3
+	authenticated: 4
 };

@@ -8,7 +8,7 @@ var client = xmpp.create({
 	host: 'twattle.net',
 	jid: 'twat20',
 	password: 'twat20',
-	useSSL: true
+	useTls: true
 });
 
 client.on('closed', function(reason) {
