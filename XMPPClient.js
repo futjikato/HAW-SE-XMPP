@@ -113,8 +113,8 @@ proto._init = function() {
 	stream.on('text', function(text) {
 		that._saxOnText.call(that, text);
 	});
-	sock.pipe(stream).pipe(process.stdout);
-//	sock.pipe(stream);	
+//	sock.pipe(stream).pipe(process.stdout);
+	sock.pipe(stream);	
 	this._sock = sock;
 	this._saxStream = stream;
 	sock.once('connect',
@@ -165,16 +165,9 @@ proto._saxOnOpentag = function(node) {
 	else if(this._state == XMPPState.negotiatingTls) {
 		switch(tag) {
 		case 'proceed':
-			this._sock.unpipe(this._saxStream);
-			var that = this;
-			starttls(this._sock, function() {
-				that._sock = this.cleartext;
-				that._sock.pipe(that._saxStream);
-				that._tlsEnabled = true;
-				// Need to start over with stream negotiation.
-				that._negotiateStream(false);
-			});
+			this._continueTls();
 			break;
+		// Fixme: Handle failure.
 		}
 	}
 	else if(this._state == XMPPState.authenticating) {
@@ -213,8 +206,7 @@ proto._saxOnClosetag = function(node) {
 	
 	if(this._state == XMPPState.negotiatingStream) {
 		switch(tag) {
-		// Server has sent its set of features. Continue with TLS or
-		// SASL negotiation.
+		// Server has sent features. Continue with TLS or SASL negotiation.
 		case 'stream:features':
 			if(this._serverOpts.startTls === true) {
 				if(this._tlsEnabled === true)
@@ -240,12 +232,12 @@ proto._saxOnClosetag = function(node) {
  */
 proto._saxOnText = function(text) {
 	var tag = this._openTag.toLowerCase();
-	// Look for text sent during stream-negotiating.
 	if(this._state == XMPPState.negotiatingStream) {
 		switch(tag) {
 		// Parse SASL mechanism advertised by server.
 		case 'mechanism':
-			this._serverOpts.saslMechanisms.push(text);
+			if(this._serverOpts.saslMechanisms.indexOf(text) < 0)
+				this._serverOpts.saslMechanisms.push(text);
 			break;
 		}		
 	}
@@ -296,6 +288,22 @@ proto._startTls = function() {
 };
 
 /**
+ * Continues the TLS negotiation with the server.
+ */
+proto._continueTls = function() {
+	this._sock.unpipe(this._saxStream);
+	var that = this;
+	starttls(this._sock, function() {
+		that._sock = this.cleartext;
+		that._sock.pipe(that._saxStream);
+		that._tlsEnabled = true;
+		that.emit('tlsenabled');
+		// Need to start over with stream negotiation.
+		that._negotiateStream(false);
+	});	
+};
+
+/**
  * Initiates the SASL authentication exchange.
  * 
  * @this
@@ -303,23 +311,14 @@ proto._startTls = function() {
  */
 proto._startAuthentication = function() {
 	this._state = XMPPState.authenticating;
-	// Pick the best mechanism available:
-	//  1. Scram-Sha-1
-	//  2. Digest-Md5
-	//  3. Plain
-	// --> TODO.
-	this.saslMechanism = 'SCRAM-SHA-1';
-	
-	// Give user a chance to override preferred mechanism.
-	this.emit('pickSASLMechanism', this._serverOpts.saslMechanisms);
-	
-	// Fixme: Throw exception if mechanism is not implemented.
+	// Pick the best mechanism available.
+	this.saslMechanism = this._selectSaslMechanism();
+	// Create an instance of the selected mechanism.
 	this._saslInstance = sasl.create(this.saslMechanism);
-	
 	// Add jid and password to mechanism's properties.
 	this._saslInstance.add('username', this._opts.jid);
 	this._saslInstance.add('password', this._opts.password);
-	
+	// If mechanism requires client initiation, send it along.
 	var initial = this._saslInstance.hasInitial ?
 			this._saslInstance.getResponse() : '';	
 	this._write({
@@ -382,11 +381,41 @@ proto._completeAuthentication = function(challenge) {
 			throw new Error('Authentication aborted.');
 		}
 	}
-	
 	console.log('SASL authentication completed.');
 	// Switch to authenticated state.
 	this._state = XMPPState.authenticated;
 	this.emit('authenticated');
+};
+
+/**
+ * Picks the best SASL mechanisms from the list of mechanisms advertised by
+ * the server.
+ * 
+ * @returns
+ *  The selected SASL mechanism.
+ * @exception Error
+ *  Thrown if no suitable SASL mechanism could be selected.
+ */
+proto._selectSaslMechanism = function() {
+	var order = {
+		"SCRAM-SHA-1": 3,
+		"DIGEST-MD5": 2,
+		"PLAIN": 1
+	};
+	var ret = [0, ''];
+	var available = this._serverOpts.saslMechanisms;
+	for(var i in available) {
+		var mech = available[i].toUpperCase();
+		if(order[mech] == null)
+			continue;	
+		if(order[mech] > ret[0]) {
+			ret[0] = order[mech];
+			ret[1] = available[i];
+		}
+	}
+	if(ret[1] === '')
+		throw new Error('Could not select SASL mechanism.');
+	return ret[1];
 };
 
 /**
@@ -404,10 +433,13 @@ proto._write = function(json, opts) {
 	var xml = json2xml(json, opts);
 	if(opts.dontClose === true)
 		xml = xml.replace(/\/>$/, '>');
-	console.log('C -> ' + xml);
+//	console.log('C -> ' + xml);
 	this._sock.write(xml);
 };
 
+/**
+ * Connect to the server.
+ */
 proto.connect = function() {
 	this._init();
 };
