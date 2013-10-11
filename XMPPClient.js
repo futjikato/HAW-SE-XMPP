@@ -38,6 +38,11 @@ function XMPPClient(opts) {
 	 * The instance of the SASL mechanism plugin used for authentication.
 	 */
 	this._saslInstance = null;
+	
+	/**
+	 * Set to true for debugging output.
+	 */
+	this._debug = false;
 
 	/**
 	 * The set of options passed into the constructor.
@@ -69,10 +74,10 @@ function XMPPClient(opts) {
 		startTls: false,
 		
 		/**
-		 * True if STARTTLS is mandatory before authentication can be
-		 * performed.
+		 * True if the server supports or requires resource binding after
+		 * authentication.
 		 */
-		startTlsMandatory: false
+		binding: false		
 	};
 	
 	if(opts.autoConnect === true)
@@ -113,8 +118,10 @@ proto._init = function() {
 	stream.on('text', function(text) {
 		that._saxOnText.call(that, text);
 	});
-//	sock.pipe(stream).pipe(process.stdout);
-	sock.pipe(stream);	
+	if(this._debug === true)
+		sock.pipe(stream).pipe(process.stdout);
+	else
+		sock.pipe(stream);
 	this._sock = sock;
 	this._saxStream = stream;
 	sock.once('connect',
@@ -136,11 +143,14 @@ proto._init = function() {
  *  Nothing.
  */
 proto._saxOnOpentag = function(node) {
+	var parent = '';
 	// Keep track of nested tags.
 	if(this._tags === undefined)
 		this._tags = [];
-	if(this._openTag !== undefined)
+	if(this._openTag !== undefined) {
 		this._tags.push(this._openTag);
+		parent = this._openTag;
+	}
 	this._openTag = node.name;
 	
 	if(this._pendingError === true)
@@ -154,15 +164,12 @@ proto._saxOnOpentag = function(node) {
 	
 	var tag = this._openTag.toLowerCase();
 	
+	// Parse server features such as 'starttls' etc.
+	if(parent.match(/stream:features/i) !== null)
+		return this._parseServerFeature(node);
+	
 	// FIXME: Refactor into dispatch methods?
-	if(this._state == XMPPState.negotiatingStream) {
-		switch(tag) {
-		case 'starttls':
-			this._serverOpts.startTls = true;
-			break;
-		}
-	}
-	else if(this._state == XMPPState.negotiatingTls) {
+	if(this._state == XMPPState.negotiatingTls) {
 		switch(tag) {
 		case 'proceed':
 			this._continueTls();
@@ -175,7 +182,6 @@ proto._saxOnOpentag = function(node) {
 		case 'failure':
 			console.log('SASL authentication failed.');
 			break;
-			
 		case 'success':
 //			this._completeAuthentication();
 			break;
@@ -203,7 +209,7 @@ proto._saxOnClosetag = function(node) {
 			[this._errorId]
 		);
 	}
-	
+		
 	if(this._state == XMPPState.negotiatingStream) {
 		switch(tag) {
 		// Server has sent features. Continue with TLS or SASL negotiation.
@@ -219,6 +225,15 @@ proto._saxOnClosetag = function(node) {
 				// SASL authentication.
 				this._startAuthentication();
 			}
+			break;
+		}
+	} else if(this._state == XMPPState.authenticated) {
+		switch(tag) {
+		case 'stream:features':
+			if(this._serverOpts.bind === true)
+				this._startResourceBinding();
+			else
+				console.log('Server does not require resource binding.');
 			break;
 		}
 	}
@@ -250,6 +265,28 @@ proto._saxOnText = function(text) {
 			this._completeAuthentication(text);
 			break;
 		}
+	}
+};
+
+/**
+ * Parses a feature send as part of the server's feature list.
+ * 
+ * @param node
+ *  The XML node representing the feature.
+ */
+proto._parseServerFeature = function(node) {
+	var tag = node.name;
+	switch(tag) {
+	case 'starttls':
+		this._serverOpts.startTls = true;
+		break;
+	case 'bind':
+		this._serverOpts.bind = true;
+		break;
+	default:
+		if(this._debug === true)
+			console.log('Ignored server feature: ' + tag);
+		break;
 	}
 };
 
@@ -385,6 +422,17 @@ proto._completeAuthentication = function(challenge) {
 	// Switch to authenticated state.
 	this._state = XMPPState.authenticated;
 	this.emit('authenticated');
+	
+	this._write({
+		'stream:stream': '',
+		attr: {
+			'to': this._opts.host,
+			'from': this._opts.jid,
+			'xmlns': 'jabber:client',
+			'xmlns:stream': 'http://etherx.jabber.org/streams',
+			'version': '1.0'
+		}
+	}, { dontClose: true });	
 };
 
 /**
@@ -419,6 +467,23 @@ proto._selectSaslMechanism = function() {
 };
 
 /**
+ * Starts the resource-binding process.
+ */
+proto._startResourceBinding = function() {
+	this._state = XMPPState.bindingResource;
+	// Refer to RFC3920, 7. Resource Binding.
+	this._write({
+		iq: {
+			'bind': '',
+			attr: {
+				'xmlns': 'urn:ietf:params:xml:ns:xmpp-bind'
+			}
+		},
+		attr: { 'type': 'set', 'id': 'bind_1' }
+	});
+};
+
+/**
  * Serializes the specified object into XML and sends it to the server.
  * 
  * @param json
@@ -433,7 +498,8 @@ proto._write = function(json, opts) {
 	var xml = json2xml(json, opts);
 	if(opts.dontClose === true)
 		xml = xml.replace(/\/>$/, '>');
-//	console.log('C -> ' + xml);
+	if(this._debug === true)
+		console.log('C -> ' + xml);
 	this._sock.write(xml);
 };
 

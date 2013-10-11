@@ -26,5 +26,10 @@ module.exports = {
 	/**
 	 * User has been authenticated.
 	 */
-	authenticated: 4
+	authenticated: 4,
+	
+	/**
+	 * Resource binding is being performed.
+	 */
+	bindingResource: 5
 };
