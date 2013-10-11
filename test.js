@@ -8,24 +8,27 @@ var client = xmpp.create({
 
 	host: 'twattle.net',
 	jid: 'twat20',
-	password: 'twat20',
-	useTls: true
+	password: 'twat20'
 });
 
 client.on('closed', function(reason) {
-	console.log('I have been disconnected: ' + reason);
+	console.log('Disconnected: ' + reason);
 });
 
 client.on('connect', function() {
-	console.log('Connected to server...');
+	console.log('Connected to server.');
 });
 
 client.on('tlsenabled', function() {
-	console.log('Switchted to secure TLS stream.');
+	console.log('Switched to secure TLS stream.');
 });
 
 client.on('authenticated', function() {
-	console.log('My credentials have been accepted, now logged in.');
+	console.log('Credentials accepted, logged in.');
+});
+
+client.on('error', function(error) {
+	console.log('An error occurred: ' + error.message);
 });
 
 client.connect();

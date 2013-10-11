@@ -60,6 +60,11 @@ function XMPPClient(opts) {
 	this._tlsEnabled = false;
 	
 	/**
+	 * True if client has authed with the server.
+	 */
+	this._authenticated = false;
+	
+	/**
 	 * A set of server options populated during stream-negotiation.
 	 */
 	this._serverOpts = {
@@ -101,35 +106,34 @@ var proto = XMPPClient.prototype;
  *  Nothing.
  */
 proto._init = function() {
-	console.log('Connecting to ' + this._opts.host + ' on port ' +
+	this._debugPrint('Connecting to ' + this._opts.host + ' on port ' +
 			this._opts.port);
 	this._state = XMPPState.connecting;
-	
 	var sock = net.connect(this._opts);
 	var stream = sax.createStream(true);
 	// Setup SAX event handlers.
 	var that = this;
-	stream.on('opentag', function(node) {
-		that._saxOnOpentag.call(that, node);
-	});
-	stream.on('closetag', function(node) {
-		that._saxOnClosetag.call(that, node);
-	});
-	stream.on('text', function(text) {
-		that._saxOnText.call(that, text);
-	});
-	if(this._debug === true)
-		sock.pipe(stream).pipe(process.stdout);
-	else
-		sock.pipe(stream);
+	stream.on('opentag',
+			function(node) { that._saxOnOpentag.call(that, node); });
+	stream.on('closetag',
+			function(node) { that._saxOnClosetag.call(that, node); });
+	stream.on('text',
+			function(text) { that._saxOnText.call(that, text); });
 	this._sock = sock;
 	this._saxStream = stream;
 	sock.once('connect',
 		function() {
+			if(that._debug === true)
+				sock.pipe(stream).pipe(process.stdout);
+			else
+				sock.pipe(stream);
 			that.emit('connect');
 			that._negotiateStream.call(that, true);
 		}
-	);	
+	);
+	sock.on('error', function(e) {
+		that.emit('error', e);
+	});
 };
 
 /**
@@ -161,7 +165,6 @@ proto._saxOnOpentag = function(node) {
 		this._pendingError = true;
 	else
 		this._pendingError = false;
-	
 	var tag = this._openTag.toLowerCase();
 	
 	// Parse server features such as 'starttls' etc.
@@ -174,16 +177,18 @@ proto._saxOnOpentag = function(node) {
 		case 'proceed':
 			this._continueTls();
 			break;
-		// Fixme: Handle failure.
+		case 'failure':
+			this._raiseError('TLS negotiation failed.');
+			break;
 		}
 	}
 	else if(this._state == XMPPState.authenticating) {
 		switch(tag) {
 		case 'failure':
-			console.log('SASL authentication failed.');
+			this._raiseError('SASL authentication failed.');
 			break;
 		case 'success':
-//			this._completeAuthentication();
+			this._completeAuthentication();
 			break;
 		}
 	}
@@ -233,7 +238,7 @@ proto._saxOnClosetag = function(node) {
 			if(this._serverOpts.bind === true)
 				this._startResourceBinding();
 			else
-				console.log('Server does not require resource binding.');
+				this._debugPrint('Server does not require resource binding.');
 			break;
 		}
 	}
@@ -269,7 +274,7 @@ proto._saxOnText = function(text) {
 };
 
 /**
- * Parses a feature send as part of the server's feature list.
+ * Parses a feature sent as part of the server's feature list.
  * 
  * @param node
  *  The XML node representing the feature.
@@ -284,8 +289,7 @@ proto._parseServerFeature = function(node) {
 		this._serverOpts.bind = true;
 		break;
 	default:
-		if(this._debug === true)
-			console.log('Ignored server feature: ' + tag);
+		this._debugPrint('Ignored server feature: ' + tag);
 		break;
 	}
 };
@@ -402,6 +406,9 @@ proto._continueAuthentication = function(challenge) {
  *  Nothing.
  */
 proto._completeAuthentication = function(challenge) {
+	// Do nothing if already authed.
+	if(this.__authenticated === true)
+		return;
 	// The challenge is optional.
 	if(challenge !== undefined) {
 		challenge = new Buffer(challenge, 'base64').toString('ascii');
@@ -415,14 +422,14 @@ proto._completeAuthentication = function(challenge) {
 					'xmlns': 'urn:ietf:params:xml:ns:xmpp-sasl'
 				}
 			});
-			throw new Error('Authentication aborted.');
+			this._raiseError('Authentication aborted.');
 		}
 	}
-	console.log('SASL authentication completed.');
+	this._debugPrint('SASL authentication completed.');
 	// Switch to authenticated state.
 	this._state = XMPPState.authenticated;
+	this._authenticated = true;
 	this.emit('authenticated');
-	
 	this._write({
 		'stream:stream': '',
 		attr: {
@@ -501,6 +508,16 @@ proto._write = function(json, opts) {
 	if(this._debug === true)
 		console.log('C -> ' + xml);
 	this._sock.write(xml);
+};
+
+proto._debugPrint = function(s) {
+	if(this._debug === true)
+		console.log(s);
+};
+
+proto._raiseError = function(reason) {
+	this.emit('error', new Error(reason));
+	// Shutdown stream.
 };
 
 /**
