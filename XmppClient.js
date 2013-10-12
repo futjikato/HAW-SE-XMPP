@@ -2,7 +2,7 @@
  * @authors	 	Torben Könke <torben.koenke@haw-hamburg.de>,
  * @date 		12-10-13
  * 
- * A client for the Extensible Messaging and Presence Protocol (XMPP).
+ * A client library for the Extensible Messaging and Presence Protocol (XMPP).
  */
 var net = require('net');
 var events = require('events');
@@ -21,17 +21,7 @@ var defaultOpts = {
 function XmppClient(opts) {
 	// jsnode events boilerplate.
 	events.EventEmitter.call(this);	
-	
-	/**
-	 * The SASL mechanism to use during authentication.
-	 */
-	this.saslMechanism = null;
-	
-	/**
-	 * The instance of the SASL mechanism plugin used for authentication.
-	 */
-	this._saslInstance = null;
-	
+			
 	/**
 	 * Set to true for debugging output.
 	 */
@@ -41,11 +31,6 @@ function XmppClient(opts) {
 	 * The set of options passed into the constructor.
 	 */
 	this._opts = require('extend')(defaultOpts, opts);	
-	
-	/**
-	 * The state the XMPPClient is currently in.
-	 */
-	this._state = null;
 	
 	/**
 	 * True if TLS encryption has been negotiated via STARTTLS.
@@ -95,7 +80,7 @@ proto.connect = function() {
  *  Nothing.
  */
 proto._init = function() {
-	console.log('Connecting to ' + this._opts.host + ' on port ' +
+	this._debugPrint('Connecting to ' + this._opts.host + ' on port ' +
 			this._opts.port);	
 	var sock = net.connect(this._opts);
 	var that = this;
@@ -142,12 +127,18 @@ proto._setupConnection = function() {
 			// Go on with SASL authentication.
 			this._startAuthentication(this._opts.jid, this._opts.password);
 		}
-		else {
-			// FIXME: raise 'error' event and shutdown.
-			this._debugPrint('TLS negotiation failed.');
-		}
+		else
+			this._error('TLS negotiation failed.');
 	});
-	
+	// Wait for authentication to complete.
+	this.once('_authStatus', function(success) {
+		if(success === true) {
+			this._debugPrint('SASL authentication successful.');
+			// Go on with resource-binding, if needed.
+		}
+		else
+			this._error('SASL authentication failed.');
+	});
 };
 
 /**
@@ -187,25 +178,47 @@ proto._startTls = function() {
 			'xmlns': 'urn:ietf:params:xml:ns:xmpp-tls'
 		}
 	});
-	
 	// Server issues 'proceed' if we can go ahead.
-	this._xml.once_('proceed', this, function(node) {
-		this._xml.unpipe(this._sock);
-		this._sock.unpipe(process.stdout);
-		var that = this;
-		require('starttls')(this._sock, function() {
-			that._sock = this.cleartext;
-			that._xml.pipe(that._sock);
-			if(that._debug === true)
-				that._sock.pipe(process.stdout);
-			that._negotiateStream();
-			that.once('_streamNegotiated', function() {
-				that._tlsEnabled = true;
-				that.emit('_tlsStatus', true);
-			});
-		});			
-	});
-	// FIXME: Handle failure case.
+	this._xml.once_('proceed', this, this._continueTls);
+	// ...or 'failure' in which case we abort the negotiation.
+	this._xml.once_('failure', this, this._abortTls);
+};
+
+/**
+ * Continues the TLS negotiation.
+ * 
+ * @this
+ *  References the XmppClient instance.
+ */
+proto._continueTls = function() {
+	// Remove abort handler.
+	this._xml.removeAllListeners('failure');
+	this._xml.unpipe(this._sock);
+	this._sock.unpipe(process.stdout);
+	var that = this;
+	require('starttls')(this._sock, function() {
+		that._sock = this.cleartext;
+		that._xml.pipe(that._sock);
+		if(that._debug === true)
+			that._sock.pipe(process.stdout);
+		that._negotiateStream();
+		that.once('_streamNegotiated', function() {
+			that._tlsEnabled = true;
+			that.emit('_tlsStatus', true);
+		});
+	});		
+};
+
+/**
+ * Aborts TLS negotiation.
+ * 
+ * @this
+ *  References the XmppClient instance.
+ */
+proto._abortTls = function() {
+	// Remove continue handler.
+	this._xml.removeAllListeners('proceed');
+	this.emit('_tlsStatus', false);
 };
 
 /**
@@ -215,13 +228,14 @@ proto._startTls = function() {
  *  The username to authenticate with.
  * @param password
  *  The password to authenticate with.
+ * @this
+ *  References the XmppClient instance.
  */
 proto._startAuthentication = function(username, password) {
 	// Pick the best mechanism available.
 	var name = this._selectSaslMechanism(this._features.mechanisms);	
 	// Create an instance of the selected mechanism.
 	var saslInstance = sasl.create(name);
-	
 	saslInstance.add('username', username);
 	saslInstance.add('password', password);
 	// If mechanism requires client initiation, send it along.
@@ -233,7 +247,95 @@ proto._startAuthentication = function(username, password) {
 			'xmlns': 'urn:ietf:params:xml:ns:xmpp-sasl',
 			'mechanism': name
 		}
-	});		
+	});
+	// Server issues 'challenge' if we can go ahead.
+	this._xml.once_('challenge', this, function(node) {
+		this._continueAuthentication(saslInstance, node);
+	});
+	// ...or 'failure' in which case we abort the negotiation.
+	this._xml.once_('failure', this, this._abortAuthentication);	
+};
+
+/**
+ * Continues the SASL authentication exchange.
+ *
+ * @param saslInstance
+ *  The instance of the SASL mechanism that is being used.
+ * @param node
+ *  The 'challenge' node sent by the server.
+ * @this
+ *  References the XmppClient instance.
+ */
+proto._continueAuthentication = function(saslInstance, node) {
+	// Remove abort handler.
+	this._xml.removeAllListeners('failure');	
+	// Base64 decode challenge.
+	var challenge = new Buffer(node.text, 'base64').toString('ascii');
+	// Hand to SASL instance and get challenge response.
+	var response = saslInstance.getResponse(challenge);
+	// Base64 encode response.
+	response = new Buffer(response).toString('base64');
+	// Hand challenge response to server.
+	this._write({
+		'response': response,
+		attr: {
+			'xmlns': 'urn:ietf:params:xml:ns:xmpp-sasl'
+		}
+	});
+	// Server responds with 'challenge', 'success' or 'failure'.
+	this._xml.once_('challenge', this, function(_node) {
+		this._continueAuthentication(saslInstance, _node);
+	});
+	this._xml.once_('success', this, function(_node) {
+		this._completeAuthentication(saslInstance, _node);
+	});
+	this._xml.once_('failure', this, this._abortAuthentication);
+};
+
+/**
+ * Aborts the SASL authentication exchange.
+ * 
+ * @this
+ *  References the XmppClient instance.
+ */
+proto._abortAuthentication = function() {
+	// Remove continue and success handlers.
+	this._xml.removeAllListeners('challenge')
+		.removeAllListeners('success');
+	this.emit('_authStatus', false);	
+};
+
+/**
+ * Completes the SASL authentication exchange.
+ * 
+ * @param saslInstance
+ *  The instance of the SASL mechanism that is being used.
+ * @param node
+ *  The 'success' node sent by the server.
+ * @this
+ *  References the XmppClient instance.
+ */
+proto._completeAuthentication = function(saslInstance, node) {
+	// Remove failure and challenge handlers.
+	this._xml.removeAllListeners('failure')
+		.removeAllListeners('challenge');
+	// The final challenge is optional.
+	if(node.text != null) {
+		var challenge = new Buffer(node.text, 'base64').toString('ascii');
+		// Hand to SASL instance and get challenge response.
+		var response = saslInstance.getResponse(challenge);
+		// If response is not the empty string, abort the authentication exchange.
+		if(response !== '') {
+			this._abortAuthentication();
+			return;
+		}
+	}
+	// Finally, we need to negotiate a new stream.
+	this._negotiateStream();
+	this.once('_streamNegotiated', function() {
+		this._authenticated = true;
+		this.emit('_authStatus', true);	
+	});	
 };
 
 /**
@@ -243,11 +345,14 @@ proto._startAuthentication = function(username, password) {
 proto._parseFeatures = function(node) {
 	var feats = {
 		startTls: node.starttls != null,
+		bind: node.bind != null,
 		mechanisms: []
 	};
-	for(var i in node.mechanisms.mechanism) {
-		var mech = node.mechanisms.mechanism[i];
-		feats.mechanisms.push(mech.text);
+	if(node.mechanisms != null) {
+		for(var i in node.mechanisms.mechanism) {
+			var mech = node.mechanisms.mechanism[i];
+			feats.mechanisms.push(mech.text);
+		}
 	}
 	return feats;
 };
@@ -308,6 +413,18 @@ proto._write = function(json, opts) {
 	if(this._debug === true)
 		console.log('C -> ' + xml);
 	this._sock.write(xml);
+};
+
+/**
+ * Raises the 'error' event and shuts client down.
+ * 
+ * @this
+ *  References the XmppClient instance.
+ */
+proto._error = function(reason) {
+	this._debugPrint('_error: ' + reason);
+	this.emit('error', new Error(reason));
+	// FIXME: Shutdown.
 };
 
 /**
