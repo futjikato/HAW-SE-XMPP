@@ -41,20 +41,54 @@ function XmlParser(stream) {
 util.inherits(XmlParser, events.EventEmitter);
 var proto = XmlParser.prototype;
 
+/**
+ * Pipes the XmlParser to the specified stream.
+ * 
+ * @param stream
+ *  The stream to pipe the XmlParser instance to.
+ */
 proto.pipe = function(stream) {
 	stream.pipe(this._saxStream);
 };
 
+/**
+ * Unpipes the XmlParser from the specified stream.
+ * 
+ * @param stream
+ *  The stream to unpipe the XmlParser instance from.
+ */
 proto.unpipe = function(stream) {
 	stream.unpipe(this._saxStream);
-}
+};
 
+/**
+ * Extended 'once' method to allow for passing a context under
+ * which the listener executes.
+ * 
+ * @param event
+ *  The event to subscribe to.
+ * @param context
+ *  The context under which to execute the listener.
+ * @param listener
+ *  The listener function to execute when the event is raised.
+ */
 proto.once_ = function(event, context, listener) {
 	this.once(event, function(args) {
 		listener.call(context, args);
 	});
 };
 
+/**
+ * Extended 'on' method to allow for passing a context under
+ * which the listener executes.
+ * 
+ * @param event
+ *  The event to subscribe to.
+ * @param context
+ *  The context under which to execute the listener.
+ * @param listener
+ *  The listener function to execute when the event is raised.
+ */
 proto.on_ = function(event, context, listener) {
 	this.on(event, function(args) {
 		listener.call(context, args);

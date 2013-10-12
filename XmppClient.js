@@ -86,18 +86,16 @@ proto._init = function() {
 	var that = this;
 	this._sock = sock;
 	this._xml = null;
-	sock.once('connect',
-		function() {
-			if(that._debug === true)
-				sock.pipe(process.stdout);
-			that._xml = new XmlParser(sock);
-			// Install an error handler for stream-level errors.
-			that._xml.on_('stream:error', that, that._streamError);			
-			that.emit('connect');
-			
-			that._setupConnection.call(that);
-		}
-	);
+	sock.once('connect', function() {
+		if(that._debug === true)
+			sock.pipe(process.stdout);
+		that._xml = new XmlParser(sock);
+		// Install an error handler for stream-level errors.
+		that._xml.on_('stream:error', that, that._error);			
+		that.emit('connect');
+	
+		that._setupConnection.call(that);
+	});
 	sock.on('error', function(e) {
 		that.emit('error', e);
 	});
@@ -386,13 +384,6 @@ proto._selectSaslMechanism = function(list) {
 	if(ret[1] === '')
 		throw new Error('Could not select SASL mechanism.');
 	return ret[1];
-};
-
-/**
- * Callback invoked when a stream-level error condition is encountered.
- */
-proto._streamError = function(node) {
-	this.emit('error', 'Fehler');
 };
 
 /**
