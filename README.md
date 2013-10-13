@@ -25,8 +25,8 @@ Now start the node-webkit.app normally.
 Windows
 -------
 
-TODO
-Build on windows and write documentation
+Building the app.nw with 7-zip: ``` 7z.exe a -tzip app.nw * -r ```<br>
+Start nw.exe via cmd ``` nw.exe <path to app.nw> ``` or drag ``` app.nw ``` to ``` nw.exe ``` to open it.
 
 Linux
 -----
