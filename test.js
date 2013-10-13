@@ -1,10 +1,9 @@
-
 var XmppClient = require('./XmppClient');
 
 var client = new XmppClient({
 	host: 'twattle.net',
 	jid: 'twat20',
-	password: 'twat20'	
+	password: 'twat20'
 });
 
 client.on('connect', function() {

@@ -129,7 +129,11 @@ proto._openTag = function(node) {
  *  The name of the tag.
  */
 proto._closeTag = function(name) {
-	this.emit(name, this._parent);
+	// Invoke for element that is being closed.
+	if(this._parent instanceof Array)
+		this.emit(name, this._parent[this._parent.length - 1]);
+	else
+		this.emit(name, this._parent);
 	this._parent = this._parents.pop();
 };
 

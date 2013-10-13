@@ -18,6 +18,18 @@ var defaultOpts = {
 	port: 5222
 };
 
+/**
+ * Initializes a new instance of the XmppClient class.
+ * 
+ * @param opts
+ *  A set of options, some of which are required:
+ *   'host'      specifies the hostname of the XMPP server.
+ *   'jid'       the bare jid/username to connect with.
+ *   'password'  the password for the respective jid.
+ *  optional:
+ *   'port'      the port on which to connect. Defaults to 5222,
+ *               if not specified.
+ */
 function XmppClient(opts) {
 	// jsnode events boilerplate.
 	events.EventEmitter.call(this);	
@@ -51,6 +63,11 @@ function XmppClient(opts) {
 	 * The JID used for sending and receiving stanzas.
 	 */
 	this._jid = opts.jid;
+	
+	/**
+	 * A set of callback handlers for IQ stanzas.
+	 */
+	this._iqHandler = {};
 	
 	if(opts.autoConnect === true)
 		this._init();	
@@ -95,8 +112,9 @@ proto._init = function() {
 		if(that._debug === true)
 			sock.pipe(process.stdout);
 		that._xml = new XmlParser(sock);
-		// Install an error handler for stream-level errors.
-		that._xml.on_('stream:error', that, that._error);			
+		// Install handlers for stream-level errors and IQ stanzas.
+		that._xml.on_('stream:error', that, that._error);
+		that._xml.on_('iq', that, that._onIqStanza);
 		that.emit('connect');
 	
 		that._setupConnection.call(that);
@@ -146,11 +164,21 @@ proto._setupConnection = function() {
 	});
 	// Wait for resource-binding to complete.
 	this.once('_bindStatus', function(success) {
-		if(success === true)
+		if(success === true) {
 			this._debugPrint('Resource binding successful, jid = ' +
 					this._jid);
+			if(this._features.session === true)
+				this._establishSession();
+		}
 		else
 			this._error('Resource Binding failed.');
+	});
+	// Wait for session establishment.
+	this.once('_sessionStatus', function(success) {
+		if(success === true)
+			this._debugPrint('Session established, jid is now active.');
+		else
+			this._error('Session could not be established.');
 	});
 };
 
@@ -359,21 +387,32 @@ proto._completeAuthentication = function(saslInstance, node) {
  */
 proto._startBinding = function() {
 	// Refer to RFC3920, 7. Resource Binding.
-	this._write({
-		iq: { 'bind': '',
-			attr: { 'xmlns': 'urn:ietf:params:xml:ns:xmpp-bind' }
-		},
-		attr: { 'type': 'set', 'id': 'bind_1' }
-	});
-	// Server must respond with an IQ stanza.
-	this._xml.once_('iq', this, function(node) {
+	var e = { bind: '', attr: {
+		'xmlns': 'urn:ietf:params:xml:ns:xmpp-bind'} };
+	this._iq({ type: 'set' }, e, function(node) {
 		var success = node.attributes.type.match(/result/i) != null;
 		if(success === true) {
 			this._jid = node.bind.jid.text;
 			this.emit('_bindStatus', true);
 		} else
 			this.emit('_bindStatus', false);
-	});
+	});	
+};
+
+/**
+ * Establishes a session.
+ * 
+ * @this
+ *  Refernces the XmppClient instance.
+ */
+proto._establishSession = function() {
+	// Refer to RFC3921, 3. Session Establishment.
+	var sess = { session: '', attr: {
+		'xmlns': 'urn:ietf:params:xml:ns:xmpp-session'} };
+	this._iq({ type: 'set', to: this._opts.host}, sess, function(node) {
+		var success = node.attributes.type.match(/result/i) != null;
+		this.emit('_sessionStatus', success);
+	});	
 };
 
 /**
@@ -384,6 +423,7 @@ proto._parseFeatures = function(node) {
 	var feats = {
 		startTls: node.starttls != null,
 		bind: node.bind != null,
+		session: node.session != null,
 		mechanisms: []
 	};
 	if(node.mechanisms != null) {
@@ -444,6 +484,56 @@ proto._write = function(json, opts) {
 	if(this._debug === true)
 		console.log('C -> ' + xml);
 	this._sock.write(xml);
+};
+
+/**
+ * Constructs and sends an IQ stanza to the specified recipient.
+ * 
+ * @param attr
+ *  The attributes of the IQ stanza element. The 'id' attribute is
+ *  added automatically.
+ * @param data
+ *  The content of the IQ stanza as a json object.
+ * @param cb
+ *  A callback method invoked once the respective result stanza
+ *  gets back to the client.
+ * @this
+ *  References the XmppClient instance.
+ */
+proto._iq = function(attr, data, cb) {
+	if(attr.id == null)
+		attr.id = this._id();
+	this._iqHandler[attr.id] = cb;
+	this._write({ iq: data, 'attr': attr });
+};
+
+/**
+ * Callback invoked when an IQ stanza has been received.
+ * 
+ * @param node
+ *  The 'IQ'-node received from the server.
+ * @this
+ *  References the XmppClient instance.
+ */
+proto._onIqStanza = function(node) {
+	var id = node.attributes.id;
+	if(id == null)
+		return;
+	// Invoke handler tied to the stanza's id.
+	if(this._iqHandler[id] !== undefined)
+		this._iqHandler[id].call(this, node);
+};
+
+/**
+ * Returns a unique identifier (id) used for tracking stanzas.
+ * 
+ * @returns
+ *  A unique identifier (id) value.
+ */
+proto._id = function() {
+	if(this._nextId == null)
+		this._nextId = 0;
+	return this._nextId++;
 };
 
 /**
