@@ -1,14 +1,11 @@
 {
-    // basic configuration
     "name": "nw-demo",
     "author": "HAW SE Teamnahme",
     "description": "XMPP chat client",
-    // node-webkit configuration
     "main": "index.html",
     "window": {
-        "toolbar": true // set to false to hide url bar stuff
+        "toolbar": true
     },
-    // npm configuration
     "dependencies" : {
         "request"   :  "2.27.0"
     }
