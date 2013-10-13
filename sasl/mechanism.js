@@ -1,4 +1,10 @@
 /**
+ * @authors	 	Torben Könke <torben.koenke@haw-hamburg.de>,
+ * @date 		10-10-13
+ * 
+ */
+
+/**
  * The base 'class' for SASL mechanism implementations.
  */
 function mechanism() {

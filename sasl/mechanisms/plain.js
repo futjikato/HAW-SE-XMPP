@@ -1,3 +1,9 @@
+/**
+ * @authors	 	Torben Könke <torben.koenke@haw-hamburg.de>,
+ * @date 		10-10-13
+ * 
+ * Implements th PLAIN authentication mechanism.
+ */
 var mechanism = require('../mechanism');
 var util = require('util');
 

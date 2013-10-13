@@ -47,6 +47,11 @@ function XmppClient(opts) {
 	 */
 	this._features = {};
 	
+	/**
+	 * The JID used for sending and receiving stanzas.
+	 */
+	this._jid = opts.jid;
+	
 	if(opts.autoConnect === true)
 		this._init();	
 }
@@ -129,13 +134,23 @@ proto._setupConnection = function() {
 			this._error('TLS negotiation failed.');
 	});
 	// Wait for authentication to complete.
-	this.once('_authStatus', function(success) {
+	this.once('_authStatus', function(success, feats) {
 		if(success === true) {
 			this._debugPrint('SASL authentication successful.');
 			// Go on with resource-binding, if needed.
+			if(feats.bind === true)
+				this._startBinding();
 		}
 		else
 			this._error('SASL authentication failed.');
+	});
+	// Wait for resource-binding to complete.
+	this.once('_bindStatus', function(success) {
+		if(success === true)
+			this._debugPrint('Resource binding successful, jid = ' +
+					this._jid);
+		else
+			this._error('Resource Binding failed.');
 	});
 };
 
@@ -330,10 +345,35 @@ proto._completeAuthentication = function(saslInstance, node) {
 	}
 	// Finally, we need to negotiate a new stream.
 	this._negotiateStream();
-	this.once('_streamNegotiated', function() {
+	this.once('_streamNegotiated', function(feats) {
 		this._authenticated = true;
-		this.emit('_authStatus', true);	
+		this.emit('_authStatus', true, feats);	
 	});	
+};
+
+/**
+ * Starts the resource-binding process.
+ * 
+ * @this
+ *  References the XmppClient instance.
+ */
+proto._startBinding = function() {
+	// Refer to RFC3920, 7. Resource Binding.
+	this._write({
+		iq: { 'bind': '',
+			attr: { 'xmlns': 'urn:ietf:params:xml:ns:xmpp-bind' }
+		},
+		attr: { 'type': 'set', 'id': 'bind_1' }
+	});
+	// Server must respond with an IQ stanza.
+	this._xml.once_('iq', this, function(node) {
+		var success = node.attributes.type.match(/result/i) != null;
+		if(success === true) {
+			this._jid = node.bind.jid.text;
+			this.emit('_bindStatus', true);
+		} else
+			this.emit('_bindStatus', false);
+	});
 };
 
 /**

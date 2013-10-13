@@ -1,3 +1,9 @@
+/**
+ * @authors	 	Torben Könke <torben.koenke@haw-hamburg.de>,
+ * @date 		10-10-13
+ * 
+ * A factory for instantiating instances of SASL mechanism implementations.
+ */
 var fs = require('fs');
 
 /**
