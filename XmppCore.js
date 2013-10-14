@@ -40,7 +40,7 @@ function XmppCore(opts) {
 	/**
 	 * Set to true for debugging output.
 	 */
-	this._debug = true;
+	this._debug = false;
 
 	/**
 	 * The set of options passed into the constructor.
@@ -126,14 +126,44 @@ proto.iq = function(attr, data, cb) {
 	this._iq(attr, data, cb);
 };
 
+/**
+ * Constructs and sends a message stanza to the server.
+ * 
+ * @param attr
+ *  The attributes of the stanza some of which are required.
+ * @param o
+ *  The content of the message.
+ * @exception Error
+ *  Thrown if the arguments or any of their fields are invalid.
+ */
 proto.message = function(attr, o) {
-	// FIXME: todo
+	if(attr == null)
+		throw new Error('attr must not be null.');
+	if(typeof attr != 'object')
+		throw new Error('attr must be an object.');
 	if(attr.to == null || typeof attr.to != 'string')
 		throw new Error('No recipient specified.');
+	var m = { message: o, 'attr': { from: this._jid,
+		to: attr.to, type: attr.type }
+	};
+	this._write(m);
 };
 
-proto.presence = function() {
-	// FIXME: todo
+/**
+ * Constructs and sends a presence stanza to the server.
+ * 
+ * @param attr
+ *  The attributes of the stanza. This may be null.
+ * @param o
+ *  The content of the presence stanza. This may be null.
+ * @exception Error
+ *  Thrown if the arguments or any of their fields are invalid.
+ */
+proto.presence = function(attr, o) {
+	if(attr != null && typeof attr != 'object')
+		throw new Error('attr must be an object.');
+	this._write({ presence: o || '',
+		'attr': attr || {} });
 };
 
 /**
@@ -625,75 +655,6 @@ proto._id = function() {
 	if(this._nextId == null)
 		this._nextId = 0;
 	return this._nextId++;
-};
-
-/**
- * Constructs and sends a message stanza to the server.
- * 
- * @param o
- *  An object made up of the following fields, some of which are required:
- *   'to'       specifies the recipient of the message (required).
- *   'type'     specifies the type of the message. Possible values are:
- *              'chat', 'error', 'groupchat', 'headline' or 'normal'. If this
- *              is not specified, it defaults to 'normal'.
- *    'thread'	the identifier of the conversation thread this message should
- *              be added to (optional).
- *    'subject' the subject of the message (optional). If specified, this can
- *              either be a string or an object literal in the form of:
- *              {
- *                'de': 'Deutscher Text',
- *                'en': 'English Text'
- *              }
- *    'body'    the body of the message (optional). If specified, this can
- *              either be a string or an object literal in the form of:
- *              {
- *                'de': 'Deutscher Text',
- *                'en': 'English Text'
- *              }
- * @this
- *  References the XmppCore instance.
- * @exception Error
- *  Thrown if the argument or any of its fields are invalid.
- */
-proto._message = function(o) {
-	if(o == null || (typeof o != 'object'))
-		throw new Error('The argument must be of type object.');
-	if(o.to == null || typeof o.to != 'string')
-		throw new Error('No recipient specified.');
-	var types = ['chat', 'error', 'groupchat', 'headline', 'normal'];
-	if(o.type != null && types.indexOf(o.type) < 0)
-		throw new Error('Invalid message type.');
-	var m = { message: [], attr: {
-		from: this._jid, to: o.to, type: o.type || 'normal' }
-	};
-	if(o.thread != null) {
-		if(typeof o.thread != 'string')
-			throw new Error('Thread must be of type string.');
-		m.message.push({ thread: o.thread });
-	}
-	if(o.subject != null) {
-		if(typeof o.subject == 'string')
-			m.message.push({subject: o.subject});
-		else if(typeof o.subject == 'object') {
-			for(var e in o.subject)
-				m.message.push({subject: o.subject[e],
-					attr: {'xml:lang': e}});
-		}
-		else
-			throw new Error('Subject must be a string or an object.');
-	}
-	if(o.body != null) {
-		if(typeof o.body == 'string')
-			m.message.push({body: o.body});
-		else if(typeof o.body == 'object') {
-			for(var d in o.body)
-				m.message.push({body: o.body[d],
-					attr: {'xml:lang': d}});
-		}
-		else
-			throw new Error('Body must be a string or an object.');
-	}	
-	this._write(m);	
 };
 
 /**

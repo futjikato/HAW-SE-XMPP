@@ -81,17 +81,90 @@ var proto = XmppIM.prototype;
  *  Thrown if the argument or any of its fields are invalid.
  */
 proto._message = function(o) {
-	// FIXME: Validate message type, validate syntax of subject and body fields.
-	//        Delegate to _core.message implementation.
 	var types = ['chat', 'error', 'groupchat', 'headline', 'normal'];
 	if(o.type != null && types.indexOf(o.type) < 0)
 		throw new Error('Invalid message type.');
-	
-	// this._core.message({ to: o.to, type: o.type || 'normal' }, { });
+	var m = [];
+	if(o.thread != null) {
+		if(typeof o.thread != 'string')
+			throw new Error('Thread must be of type string.');
+		m.push({ thread: o.thread });
+	}
+	if(o.subject != null) {
+		if(typeof o.subject == 'string')
+			m.push({subject: o.subject});
+		else if(typeof o.subject == 'object') {
+			for(var e in o.subject)
+				m.push({subject: o.subject[e], attr: {'xml:lang': e}});
+		}
+		else
+			throw new Error('Subject must be a string or an object.');
+	}
+	if(o.body != null) {
+		if(typeof o.body == 'string')
+			m.push({body: o.body});
+		else if(typeof o.body == 'object') {
+			for(var d in o.body)
+				m.push({body: o.body[d], attr: {'xml:lang': d}});
+		}
+		else
+			throw new Error('Body must be a string or an object.');
+	}
+	this._core.message({ to: o.to, type: o.type || 'normal' }, m);
 };
 
-proto._presence = function() {
-	
+/**
+ * Constructs and sends a presence stanza to the server.
+ * 
+ * @param o
+ *  An object made up of the following fields, all of which are optional:
+ *   'to'       specifies the recipient of the presence stanza.
+ *   'type'     specifies the type of the presence stanze. Possible values are:
+ *              'unavailable', 'subscribe', 'subscribed', 'unsubscribe',
+ *              'unsubscribed', 'probe' or 'error'.
+ *   'show'     specifies the particular availability status. Possible values
+ *              are:
+ *              'away', 'chat', 'dnd' or 'xa' (extended away).
+ *   'priority' specifies the priority of the stanza and must be an integer in
+ *              the range from -128 to +127.
+ *   'status'   specifies a natural-language description of the availability
+ *              status. If specified, this can either be a string or an object
+ *              literal in the form of:
+ *              {
+ *                'de': 'Deutscher Text',
+ *                'en': 'English Text'
+ *              }
+ * @this
+ *  References the XmppIM instance.
+ * @exception Error
+ *  Thrown if the argument or any of its fields are invalid.
+ */
+proto._presence = function(o) {
+	var types = ['unavailable', 'subscribe', 'subscribed', 'unsubscribe',
+	             'unsubscribed', 'probe', 'error'];
+	var show = ['away', 'chat', 'dnd', 'xa'];
+	if(o == null)
+		return this._core.presence();
+	if(o.type != null && types.indexOf(o.type) < 0)
+		throw new Error('Invalid presence type.');	
+	if(o.show != null && show.indexOf(o.show) < 0)
+		throw new Error('Invalid value for show.');
+	var m = [];
+	if(o.priority != null)
+		m.push({ priority: o.priority });
+	if(o.show != null)
+		m.push({ show: o.show });
+	if(o.status != null) {
+		if(typeof o.status == 'string')
+			m.push({status: o.status});
+		else if(typeof o.status == 'object') {
+			for(var e in o.status)
+				m.push({status: o.status[e], attr: {'xml:lang': e}});
+		}
+		else
+			throw new Error('Subject must be a string or an object.');
+	}
+	this._core.presence({ to: o.to, type: o.type }, m);
 };
 
 /**
@@ -128,7 +201,8 @@ proto._iq = function(attr, data, cb) {
  *  References the XmppIM instance.
  */
 proto._onMessage = function(stanza) {
-	
+	console.log('Neue Nachricht ----');
+	console.log(stanza);
 };
 
 /**
@@ -140,7 +214,8 @@ proto._onMessage = function(stanza) {
  *  References the XmppIM instance.
  */
 proto._onPresence = function(stanza) {
-	
+	console.log('Neue Presence ----');
+	console.log(stanza);
 };
 
 /**
@@ -152,6 +227,7 @@ proto._onPresence = function(stanza) {
  */
 proto._onReady = function() {
 	console.log('Send a presence stanza');
+	this._presence();
 };
 
 module.exports = XmppIM;
