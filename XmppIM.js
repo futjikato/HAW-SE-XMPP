@@ -164,7 +164,12 @@ proto._presence = function(o) {
 		else
 			throw new Error('Subject must be a string or an object.');
 	}
-	this._core.presence({ to: o.to, type: o.type }, m);
+	var attr = {};
+	if(o.to != null)
+		attr.to = o.to;
+	if(o.type != null)
+		attr.type = o.type;
+	this._core.presence(attr, m);
 };
 
 /**
@@ -221,13 +226,15 @@ proto._onPresence = function(stanza) {
 /**
  * Callback method invoked when the core-component has finished negotiating
  * the XML stream with the server. At this point, messages may be sent.
- * 
+ *
  * @this
  *  References the XmppIM instance.
  */
 proto._onReady = function() {
-	console.log('Send a presence stanza');
+	// Announce initial presence (Refer to XMPP-IM 'Initial Presence').
 	this._presence();
+	
+	this.emit('ready');
 };
 
 module.exports = XmppIM;

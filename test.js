@@ -7,22 +7,6 @@ var client = new XmppIM({
 	password: 'twat20'
 });
 
-/*
-var XmppClient = require('./XmppClient');
-
-var client = new XmppClient({
-	host: 'twattle.net',
-	jid: 'twat20',
-	password: 'twat20'
+client.on('ready', function() {
+	console.log('client ready.')
 });
-
-client.on('connect', function() {
-	console.log('connected');
-});
-
-client.on('error', function(e) {
-	console.log(e);
-});
-
-client.connect();
-*/

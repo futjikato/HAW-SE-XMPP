@@ -40,7 +40,7 @@ function XmppCore(opts) {
 	/**
 	 * Set to true for debugging output.
 	 */
-	this._debug = false;
+	this._debug = true;
 
 	/**
 	 * The set of options passed into the constructor.
