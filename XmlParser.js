@@ -131,6 +131,10 @@ proto._openTag = function(node) {
  *  The name of the tag.
  */
 proto._closeTag = function(name) {
+	// XMPP uses an <error/> tag which would trigger a node 'error' event,
+	// so as a workaround we rename the event.
+	if(name.match(/error/i) != null)
+		name = '_error';
 	// Invoke for element that is being closed.
 	if(this._parent instanceof Array)
 		this.emit(name, this._parent[this._parent.length - 1]);

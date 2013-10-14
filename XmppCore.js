@@ -108,24 +108,28 @@ proto.connect = function() {
  * 
  * @param attr
  *  The attributes of the IQ stanza element. The 'id' attribute is
- *  added automatically.
+ *  added automatically. This may be null if not needed.
  * @param data
  *  The content of the IQ stanza as a json object.
  * @param cb
  *  A callback method invoked once the respective result stanza
  *  gets back to the client. The callback is executed in the context
  *  of the caller.
+ * @exception Error
+ *  Thrown if the 'data' or 'cb' parameters are null or undefined.
  */
 proto.iq = function(attr, data, cb) {
-	// FIXME: Needs proper parameter validation.
-	var context = this;
-	this._iq(attr, data, function(success, node) {
-		cb.call(context, success, node);
-	});
+	if(data == null)
+		throw new Error('data must not be null.');
+	if(cb == null)
+		throw new Error('cb must not be null.');
+	this._iq(attr, data, cb);
 };
 
-proto.message = function() {
+proto.message = function(attr, o) {
 	// FIXME: todo
+	if(attr.to == null || typeof attr.to != 'string')
+		throw new Error('No recipient specified.');
 };
 
 proto.presence = function() {
@@ -561,6 +565,8 @@ proto._write = function(json, opts) {
  *  References the XmppCore instance.
  */
 proto._iq = function(attr, data, cb) {
+	if(attr == null)
+		attr = {};
 	if(attr.id == null)
 		attr.id = this._id();
 	this._iqHandler[attr.id] = cb;
