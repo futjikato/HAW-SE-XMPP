@@ -389,8 +389,7 @@ proto._startBinding = function() {
 	// Refer to RFC3920, 7. Resource Binding.
 	var e = { bind: '', attr: {
 		'xmlns': 'urn:ietf:params:xml:ns:xmpp-bind'} };
-	this._iq({ type: 'set' }, e, function(node) {
-		var success = node.attributes.type.match(/result/i) != null;
+	this._iq({ type: 'set' }, e, function(success, node) {
 		if(success === true) {
 			this._jid = node.bind.jid.text;
 			this.emit('_bindStatus', true);
@@ -403,16 +402,17 @@ proto._startBinding = function() {
  * Establishes a session.
  * 
  * @this
- *  Refernces the XmppClient instance.
+ *  References the XmppClient instance.
  */
 proto._establishSession = function() {
 	// Refer to RFC3921, 3. Session Establishment.
 	var sess = { session: '', attr: {
 		'xmlns': 'urn:ietf:params:xml:ns:xmpp-session'} };
-	this._iq({ type: 'set', to: this._opts.host}, sess, function(node) {
-		var success = node.attributes.type.match(/result/i) != null;
-		this.emit('_sessionStatus', success);
-	});	
+	this._iq({ type: 'set', to: this._opts.host}, sess,
+		function(success, node) {
+			this.emit('_sessionStatus', success);
+		}
+	);	
 };
 
 /**
@@ -487,7 +487,7 @@ proto._write = function(json, opts) {
 };
 
 /**
- * Constructs and sends an IQ stanza to the specified recipient.
+ * Constructs and sends an IQ stanza to the server.
  * 
  * @param attr
  *  The attributes of the IQ stanza element. The 'id' attribute is
@@ -519,9 +519,10 @@ proto._onIqStanza = function(node) {
 	var id = node.attributes.id;
 	if(id == null)
 		return;
+	var success = node.attributes.type.match(/result/i) != null;	
 	// Invoke handler tied to the stanza's id.
 	if(this._iqHandler[id] !== undefined)
-		this._iqHandler[id].call(this, node);
+		this._iqHandler[id].call(this, success, node);
 };
 
 /**
@@ -534,6 +535,75 @@ proto._id = function() {
 	if(this._nextId == null)
 		this._nextId = 0;
 	return this._nextId++;
+};
+
+/**
+ * Constructs and sends a message stanza to the server.
+ * 
+ * @param o
+ *  An object made up of the following fields, some of which are required:
+ *   'to'       specifies the recipient of the message (required).
+ *   'type'     specifies the type of the message. Possible values are:
+ *              'chat', 'error', 'groupchat', 'headline' or 'normal'. If this
+ *              is not specified, it defaults to 'normal'.
+ *    'thread'	the identifier of the conversation thread this message should
+ *              be added to (optional).
+ *    'subject' the subject of the message (optional). If specified, this can
+ *              either be a string or an object literal in the form of:
+ *              {
+ *                'de': 'Deutscher Text',
+ *                'en': 'English Text'
+ *              }
+ *    'body'    the body of the message (optional). If specified, this can
+ *              either be a string or an object literal in the form of:
+ *              {
+ *                'de': 'Deutscher Text',
+ *                'en': 'English Text'
+ *              }
+ * @this
+ *  References the XmppClient instance.
+ * @exception Error
+ *  Thrown if the argument or any of its fields are invalid.
+ */
+proto._message = function(o) {
+	if(o == null || (typeof o != 'object'))
+		throw new Error('The argument must be of type object.');
+	if(o.to == null || typeof o.to != 'string')
+		throw new Error('No recipient specified.');
+	var types = ['chat', 'error', 'groupchat', 'headline', 'normal'];
+	if(o.type != null && types.indexOf(o.type) < 0)
+		throw new Error('Invalid message type.');
+	var m = { message: [], attr: {
+		from: this._jid, to: o.to, type: o.type || 'normal' }
+	};
+	if(o.thread != null) {
+		if(typeof o.thread != 'string')
+			throw new Error('Thread must be of type string.');
+		m.message.push({ thread: o.thread });
+	}
+	if(o.subject != null) {
+		if(typeof o.subject == 'string')
+			m.message.push({subject: o.subject});
+		else if(typeof o.subject == 'object') {
+			for(var e in o.subject)
+				m.message.push({subject: o.subject[e],
+					attr: {'xml:lang': e}});
+		}
+		else
+			throw new Error('Subject must be a string or an object.');
+	}
+	if(o.body != null) {
+		if(typeof o.body == 'string')
+			m.message.push({body: o.body});
+		else if(typeof o.body == 'object') {
+			for(var d in o.body)
+				m.message.push({body: o.body[d],
+					attr: {'xml:lang': d}});
+		}
+		else
+			throw new Error('Body must be a string or an object.');
+	}	
+	this._write(m);	
 };
 
 /**
