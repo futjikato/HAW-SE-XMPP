@@ -1,4 +1,13 @@
 
+var XmppIM = require('./XmppIM');
+
+var client = new XmppIM({
+	host: 'twattle.net',
+	jid: 'twat20',
+	password: 'twat20'
+});
+
+/*
 var XmppClient = require('./XmppClient');
 
 var client = new XmppClient({
@@ -16,3 +25,4 @@ client.on('error', function(e) {
 });
 
 client.connect();
+*/

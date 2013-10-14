@@ -1,8 +1,11 @@
 /**
- * @authors	 	Torben Könke <torben.koenke@haw-hamburg.de>,
- * @date 		12-10-13
+ * @authors     Torben Könke <torben.koenke@haw-hamburg.de>,
+ * @date        12-10-13
+ * @modified	14-10-13 14:11
  * 
- * A client library for the Extensible Messaging and Presence Protocol (XMPP).
+ * Implements the core features of the Extensible Messaging and Presence
+ * Protocol (XMPP) as defined per RFC 3920.
+ * 
  */
 var net = require('net');
 var events = require('events');
@@ -19,7 +22,7 @@ var defaultOpts = {
 };
 
 /**
- * Initializes a new instance of the XmppClient class.
+ * Initializes a new instance of the XmppCore class.
  * 
  * @param opts
  *  A set of options, some of which are required:
@@ -30,7 +33,7 @@ var defaultOpts = {
  *   'port'      the port on which to connect. Defaults to 5222,
  *               if not specified.
  */
-function XmppClient(opts) {
+function XmppCore(opts) {
 	// jsnode events boilerplate.
 	events.EventEmitter.call(this);	
 			
@@ -76,15 +79,57 @@ function XmppClient(opts) {
 /**
  * Inherit from EventEmitter.
  */
-require('util').inherits(XmppClient, events.EventEmitter);
-var proto = XmppClient.prototype;
+require('util').inherits(XmppCore, events.EventEmitter);
+var proto = XmppCore.prototype;
 
 /**
- **** Public API methods ****
+ **** Public API ****
+ *
+ * Public events which may be subscribed to:
+ * 
+ *  'ready'      emitted when the initial negotiation with the XMPP
+ *               server has been completed and messages can be sent.
+ *  'message'    emitted when a new message stanza has been received.
+ *               The first event argument is the stanza received.
+ *  'presence'   emitted when a new presence stanza has been received.
+ *               The first event argument is the stanza received.
+ *  'error'      emitted when an error occurs.
  */
 
+/**
+ * Connects to the server and starts the initial negotiation phase.
+ */
 proto.connect = function() {
 	this._init();
+};
+
+/**
+ * Constructs and sends an IQ stanza to the server.
+ * 
+ * @param attr
+ *  The attributes of the IQ stanza element. The 'id' attribute is
+ *  added automatically.
+ * @param data
+ *  The content of the IQ stanza as a json object.
+ * @param cb
+ *  A callback method invoked once the respective result stanza
+ *  gets back to the client. The callback is executed in the context
+ *  of the caller.
+ */
+proto.iq = function(attr, data, cb) {
+	// FIXME: Needs proper parameter validation.
+	var context = this;
+	this._iq(attr, data, function(success, node) {
+		cb.call(context, success, node);
+	});
+};
+
+proto.message = function() {
+	// FIXME: todo
+};
+
+proto.presence = function() {
+	// FIXME: todo
 };
 
 /**
@@ -97,7 +142,7 @@ proto.connect = function() {
  * @param opts
  *  Object containing contructing options.
  * @this
- *  Reference to XMPPClient object being constructed.
+ *  Reference to XmppCore object being constructed.
  * @returns
  *  Nothing.
  */
@@ -112,12 +157,18 @@ proto._init = function() {
 		if(that._debug === true)
 			sock.pipe(process.stdout);
 		that._xml = new XmlParser(sock);
-		// Install handlers for stream-level errors and IQ stanzas.
-		that._xml.on_('stream:error', that, that._error);
-		that._xml.on_('iq', that, that._onIqStanza);
-		that.emit('connect');
+		// Install handlers for stream-level errors and stanzas.
+		that._xml.on_('stream:error', that, that._error)
+		         .on_('iq', that, that._onIqStanza)
+		         .on_('message', that, that._onMessageStanza)
+		         .on_('presence', that, that._onPresenceStanza);
 	
 		that._setupConnection.call(that);
+		that.once('_ready', function() {
+			that._debugPrint('XML stream is ready.');
+			// Emit 'ready' event which is part of the public API.
+			that.emit('ready');
+		});
 	});
 	sock.on('error', function(e) {
 		that.emit('error', e);
@@ -129,7 +180,7 @@ proto._init = function() {
  * possibly enabling TLS encryption and authenticating the user.
  * 
  * @this
- *  References the XmppClient instance.
+ *  References the XmppCore instance.
  */
 proto._setupConnection = function() {
 	// Try to negotiate the initial-stream.
@@ -158,6 +209,10 @@ proto._setupConnection = function() {
 			// Go on with resource-binding, if needed.
 			if(feats.bind === true)
 				this._startBinding();
+			else if(feats.session === true)
+				this._establishSession();
+			else
+				this.emit('_ready');
 		}
 		else
 			this._error('SASL authentication failed.');
@@ -169,14 +224,19 @@ proto._setupConnection = function() {
 					this._jid);
 			if(this._features.session === true)
 				this._establishSession();
+			else
+				// If session establishment is not required, we're ready.
+				this.emit('_ready');
 		}
 		else
 			this._error('Resource Binding failed.');
 	});
 	// Wait for session establishment.
 	this.once('_sessionStatus', function(success) {
-		if(success === true)
+		if(success === true) {
 			this._debugPrint('Session established, jid is now active.');
+			this.emit('_ready');
+		}
 		else
 			this._error('Session could not be established.');
 	});
@@ -186,7 +246,7 @@ proto._setupConnection = function() {
  * Negotiate the initial XML stream with the server.
  * 
  * @this
- *  References the XmppClient instance.
+ *  References the XmppCore instance.
  */
 proto._negotiateStream = function() {
 	this._write({
@@ -210,7 +270,7 @@ proto._negotiateStream = function() {
  * Initiates TLS negotiation via the STARTTLS extension.
  * 
  * @this
- *  References the XmppClient instance.
+ *  References the XmppCore instance.
  */
 proto._startTls = function() {
 	this._write({
@@ -229,7 +289,7 @@ proto._startTls = function() {
  * Continues the TLS negotiation.
  * 
  * @this
- *  References the XmppClient instance.
+ *  References the XmppCore instance.
  */
 proto._continueTls = function() {
 	// Remove abort handler.
@@ -254,7 +314,7 @@ proto._continueTls = function() {
  * Aborts TLS negotiation.
  * 
  * @this
- *  References the XmppClient instance.
+ *  References the XmppCore instance.
  */
 proto._abortTls = function() {
 	// Remove continue handler.
@@ -270,7 +330,7 @@ proto._abortTls = function() {
  * @param password
  *  The password to authenticate with.
  * @this
- *  References the XmppClient instance.
+ *  References the XmppCore instance.
  */
 proto._startAuthentication = function(username, password) {
 	// Pick the best mechanism available.
@@ -305,7 +365,7 @@ proto._startAuthentication = function(username, password) {
  * @param node
  *  The 'challenge' node sent by the server.
  * @this
- *  References the XmppClient instance.
+ *  References the XmppCore instance.
  */
 proto._continueAuthentication = function(saslInstance, node) {
 	// Remove abort handler.
@@ -337,7 +397,7 @@ proto._continueAuthentication = function(saslInstance, node) {
  * Aborts the SASL authentication exchange.
  * 
  * @this
- *  References the XmppClient instance.
+ *  References the XmppCore instance.
  */
 proto._abortAuthentication = function() {
 	// Remove continue and success handlers.
@@ -354,7 +414,7 @@ proto._abortAuthentication = function() {
  * @param node
  *  The 'success' node sent by the server.
  * @this
- *  References the XmppClient instance.
+ *  References the XmppCore instance.
  */
 proto._completeAuthentication = function(saslInstance, node) {
 	// Remove failure and challenge handlers.
@@ -383,7 +443,7 @@ proto._completeAuthentication = function(saslInstance, node) {
  * Starts the resource-binding process.
  * 
  * @this
- *  References the XmppClient instance.
+ *  References the XmppCore instance.
  */
 proto._startBinding = function() {
 	// Refer to RFC3920, 7. Resource Binding.
@@ -402,7 +462,7 @@ proto._startBinding = function() {
  * Establishes a session.
  * 
  * @this
- *  References the XmppClient instance.
+ *  References the XmppCore instance.
  */
 proto._establishSession = function() {
 	// Refer to RFC3921, 3. Session Establishment.
@@ -498,7 +558,7 @@ proto._write = function(json, opts) {
  *  A callback method invoked once the respective result stanza
  *  gets back to the client.
  * @this
- *  References the XmppClient instance.
+ *  References the XmppCore instance.
  */
 proto._iq = function(attr, data, cb) {
 	if(attr.id == null)
@@ -513,7 +573,7 @@ proto._iq = function(attr, data, cb) {
  * @param node
  *  The 'IQ'-node received from the server.
  * @this
- *  References the XmppClient instance.
+ *  References the XmppCore instance.
  */
 proto._onIqStanza = function(node) {
 	var id = node.attributes.id;
@@ -523,6 +583,30 @@ proto._onIqStanza = function(node) {
 	// Invoke handler tied to the stanza's id.
 	if(this._iqHandler[id] !== undefined)
 		this._iqHandler[id].call(this, success, node);
+};
+
+/**
+ * Callback invoked when a message stanza has been received.
+ * 
+ * @param node
+ *  The 'message'-node received from the server.
+ * @this
+ *  References the XmppCore instance.
+ */
+proto._onMessageStanza = function(node) {
+	this.emit('message', node);
+};
+
+/**
+ * Callback invoked when a presence stanza has been received.
+ * 
+ * @param node
+ *  The 'presence'-node received from the server.
+ * @this
+ *  References the XmppCore instance.
+ */
+proto._onPresenceStanza = function(node) {
+	this.emit('presence', node);
 };
 
 /**
@@ -561,7 +645,7 @@ proto._id = function() {
  *                'en': 'English Text'
  *              }
  * @this
- *  References the XmppClient instance.
+ *  References the XmppCore instance.
  * @exception Error
  *  Thrown if the argument or any of its fields are invalid.
  */
@@ -610,7 +694,7 @@ proto._message = function(o) {
  * Raises the 'error' event and shuts client down.
  * 
  * @this
- *  References the XmppClient instance.
+ *  References the XmppCore instance.
  */
 proto._error = function(reason) {
 	this._debugPrint('_error: ' + reason);
@@ -626,4 +710,4 @@ proto._debugPrint = function(s) {
 		console.log(s);
 };
 
-module.exports = XmppClient;
+module.exports = XmppCore;

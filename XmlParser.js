@@ -76,6 +76,7 @@ proto.once_ = function(event, context, listener) {
 	this.once(event, function(args) {
 		listener.call(context, args);
 	});
+	return this;
 };
 
 /**
@@ -93,6 +94,7 @@ proto.on_ = function(event, context, listener) {
 	this.on(event, function(args) {
 		listener.call(context, args);
 	});
+	return this;
 };
 
 /**
