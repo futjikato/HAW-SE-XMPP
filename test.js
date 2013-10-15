@@ -8,5 +8,5 @@ var client = new XmppIM({
 });
 
 client.on('ready', function() {
-	console.log('client ready.')
+	console.log('client ready.');
 });

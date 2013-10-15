@@ -231,10 +231,76 @@ proto._onPresence = function(stanza) {
  *  References the XmppIM instance.
  */
 proto._onReady = function() {
+	// Request roster on login.
+	this._retrieveRoster();
+	
 	// Announce initial presence (Refer to XMPP-IM 'Initial Presence').
 	this._presence();
 	
 	this.emit('ready');
+};
+
+/**
+ * Roster Management (For details, refer to XMPP-IM, 7. Roster Management).
+ */
+
+/**
+ * Retrieves the client's current roster from the server.
+ * 
+ * @param cb
+ *  A callback method invoked once the roster has been received.
+ * @this
+ *  References the XmmpIM instance.
+ */
+proto._retrieveRoster = function(cb) {
+	var q = { query:'', attr: { 'xmlns': 'jabber:iq:roster' } };
+	this._iq({ type: 'get' }, q, function(success, node) {
+		if(cb == null)
+			return;
+		if(success !== true)
+			cb(false, node);
+		// Parse response and hand parsed roster to callback.
+		else
+			cb(true, this._parseRoster(node.query));
+	});
+};
+
+/**
+ * Parses the roster items contained in the 'query'-node returned by
+ * the server on requesting the client's roster.
+ * 
+ * @param query
+ *  The 'query'-node containing a list of roster items.
+ * @this
+ *  References the XmppIM instance.
+ * @returns
+ *  An array of roster items each of which is at least guaranteed to
+ *  have the 'jid' property. Optional properties are 'name',
+ *  'subscription' and 'groups'.
+ */
+proto._parseRoster = function(query) {
+	var ret = [];
+	// empty roster.
+	if(query.item == null)
+		return ret;
+	var entries = query.item instanceof Array ? query.item :
+		[query.item];
+	for(var i in entries) {
+		var c = entries[i];
+		var item = {
+			jid: c.attributes.jid,
+			name: c.attributes.name || null,
+			subscription: c.attributes.subscription || null,
+			groups: []
+		};
+		var groups = c.group != null ? (c.group instanceof Array ?
+			c.group : [c.group]) : [];
+		for(var i in groups) {
+			item.groups.push(groups[i].text);
+		}
+		ret.push(item);
+	}
+	return ret;
 };
 
 module.exports = XmppIM;

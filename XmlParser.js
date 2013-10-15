@@ -106,22 +106,26 @@ proto.on_ = function(event, context, listener) {
  */
 proto._openTag = function(node) {
 	this._parents.push(this._parent);
-	if(this._parent[node.name] == null) {
-		this._parent[node.name] = {
+	var parent = this._parent;
+	if(parent instanceof Array)
+		parent = parent[parent.length - 1];
+	
+	if(parent[node.name] == null) {
+		parent[node.name] = {
 				attributes: node.attributes
 		};
 	} else {
-		if(this._parent[node.name] instanceof Array) {
-			this._parent[node.name].push({
+		if(parent[node.name] instanceof Array) {
+			parent[node.name].push({
 				attributes: node.attributes
 			});
 		} else {
-			var tmp = this._parent[node.name];
-			this._parent[node.name] = [tmp, {
+			var tmp = parent[node.name];
+			parent[node.name] = [tmp, {
 				attributes: node.attributes }];
 		}
 	}
-	this._parent = this._parent[node.name];	
+	this._parent = parent[node.name];	
 };
 
 /**

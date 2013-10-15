@@ -512,6 +512,10 @@ proto._establishSession = function() {
 /**
  * Parses the features of an XMPP server advertised through a
  * stream-feature node.
+ * 
+ * @param node
+ *  The 'stream:features' node containing the features supported
+ *  by the server.
  */
 proto._parseFeatures = function(node) {
 	var feats = {
