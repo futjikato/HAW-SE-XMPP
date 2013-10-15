@@ -8,5 +8,9 @@ var client = new XmppIM({
 });
 
 client.on('ready', function() {
-	console.log('client ready.');
+	// Status auf away setzen.
+	this.setStatus({
+		show: 'away',
+		status: 'Ich bin nicht da...'
+	});
 });

@@ -49,6 +49,52 @@ var proto = XmppIM.prototype;
  */
 
 /**
+ * Sets the availability status of the client.
+ * 
+ * @param o
+ *  A string specifying a natural-language description of the availability
+ *  status or an object made up of the following fields, at least one of
+ *  which must be provided:
+ *  
+ *   'show'     specifies the particular availability status of the client.
+ *              Can be one of the following values:
+ *               'away' (user is away)
+ *               'chat' (user is interested in chatting)
+ *               'dnd'  (user is busy, do not disturb)
+ *               'xa'   (user has been away for an extended period)
+ *               
+ *   'status'   a string specifying a natural-language description of the
+ *              availability status or an object literal in the form of:
+ *              {
+ *                'de': 'Statusbeschreibung auf Deutsch',
+ *                'en': 'Status description in English'
+ *              }
+ *              
+ * @exception Error
+ *  Thrown if the parameter is null, not of the proper type or if any of the
+ *  parameter's fields contain invalid values.
+ */
+proto.setStatus = function(o) {
+	if(o == null)
+		throw new Error('o must not be null.');
+	if(typeof o != 'string' && typeof o != 'object')
+		throw new Error('o must be a string or an object.');
+	if(typeof o == 'object' && o.status == null && o.show == null)
+		throw new Error('o must provide either the "status" or ' +
+			'the "show" property or both.');
+	var p = {};
+	if(typeof o == 'string')
+		p.status = o;
+	else {
+		if(o.status != null)
+			p.status = o.status;
+		if(o.show != null)
+			p.show = o.show;
+	}
+	this._presence(p);
+};
+
+/**
  **** Private methods ****
  */
 
