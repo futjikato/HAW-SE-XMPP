@@ -1,6 +1,7 @@
 /**
- * @authors	 	Torben Könke <torben.koenke@haw-hamburg.de>
- * @date 		12-10-13
+ * @authors     Torben Könke <torben.koenke@haw-hamburg.de>
+ * @date        12-10-13
+ * @modified    15-10-13 12:42
  * 
  * An events-based XML parser based on sax-js to simplify parsing
  * of XMPP documents.

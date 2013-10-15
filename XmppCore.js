@@ -27,7 +27,7 @@ var defaultOpts = {
  * @param opts
  *  A set of options, some of which are required:
  *   'host'      specifies the hostname of the XMPP server.
- *   'jid'       the bare jid/username to connect with.
+ *   'user'      the local part of the jid to connect with.
  *   'password'  the password for the respective jid.
  *  optional:
  *   'port'      the port on which to connect. Defaults to 5222,
@@ -65,7 +65,7 @@ function XmppCore(opts) {
 	/**
 	 * The JID used for sending and receiving stanzas.
 	 */
-	this._jid = opts.jid;
+	this.jid = opts.user + "@" + opts.host;
 	
 	/**
 	 * A set of callback handlers for IQ stanzas.
@@ -143,7 +143,7 @@ proto.message = function(attr, o) {
 		throw new Error('attr must be an object.');
 	if(attr.to == null || typeof attr.to != 'string')
 		throw new Error('No recipient specified.');
-	var m = { message: o, 'attr': { from: this._jid,
+	var m = { message: o, 'attr': { from: this.jid,
 		to: attr.to, type: attr.type }
 	};
 	this._write(m);
@@ -224,14 +224,14 @@ proto._setupConnection = function() {
 		if(feats.startTls === true)
 			this._startTls();
 		else
-			this._startAuthentication(this._opts.jid, this._opts.password);
+			this._startAuthentication(this._opts.user, this._opts.password);
 	});
 	
 	this.once('_tlsStatus', function(success) {
 		if(success === true) {
 			this._debugPrint('TLS encryption enabled.');
 			// Go on with SASL authentication.
-			this._startAuthentication(this._opts.jid, this._opts.password);
+			this._startAuthentication(this._opts.user, this._opts.password);
 		}
 		else
 			this._error('TLS negotiation failed.');
@@ -255,7 +255,7 @@ proto._setupConnection = function() {
 	this.once('_bindStatus', function(success) {
 		if(success === true) {
 			this._debugPrint('Resource binding successful, jid = ' +
-					this._jid);
+					this.jid);
 			if(this._features.session === true)
 				this._establishSession();
 			else
@@ -287,7 +287,7 @@ proto._negotiateStream = function() {
 		'stream:stream': '',
 		attr: {
 			'to': this._opts.host,
-			'from': this._opts.jid,
+			'from': this._opts.user,
 			'xmlns': 'jabber:client',
 			'xmlns:stream': 'http://etherx.jabber.org/streams',
 			'version': '1.0'
@@ -485,7 +485,7 @@ proto._startBinding = function() {
 		'xmlns': 'urn:ietf:params:xml:ns:xmpp-bind'} };
 	this._iq({ type: 'set' }, e, function(success, node) {
 		if(success === true) {
-			this._jid = node.bind.jid.text;
+			this.jid = node.bind.jid.text;
 			this.emit('_bindStatus', true);
 		} else
 			this.emit('_bindStatus', false);

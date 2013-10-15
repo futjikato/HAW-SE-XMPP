@@ -1,7 +1,7 @@
 /**
  * @authors     Torben Könke <torben.koenke@haw-hamburg.de>,
  * @date        14-10-13
- * @modified	14-10-13 14:57
+ * @modified	15-10-13 15:26
  * 
  * Implements the basic instant messaging (IM) and presence functionality of the
  * Extensible Messaging and Presence Protocol (XMPP) as defined per RFC 3921.
@@ -56,19 +56,19 @@ var proto = XmppIM.prototype;
  *  status or an object made up of the following fields, at least one of
  *  which must be provided:
  *  
- *   'show'     specifies the particular availability status of the client.
- *              Can be one of the following values:
- *               'away' (user is away)
- *               'chat' (user is interested in chatting)
- *               'dnd'  (user is busy, do not disturb)
- *               'xa'   (user has been away for an extended period)
- *               
- *   'status'   a string specifying a natural-language description of the
- *              availability status or an object literal in the form of:
- *              {
- *                'de': 'Statusbeschreibung auf Deutsch',
- *                'en': 'Status description in English'
- *              }
+ *   'show'        specifies the particular availability status of the client.
+ *                 Can be one of the following values:
+ *                  'away' (user is away)
+ *                  'chat' (user is interested in chatting)
+ *                  'dnd'  (user is busy, do not disturb)
+ *                  'xa'   (user has been away for an extended period)
+ *
+ *   'description' a string specifying a natural-language description of the
+ *                 availability status or an object literal in the form of:
+ *                 {
+ *                  'de': 'Statusbeschreibung auf Deutsch',
+ *                  'en': 'Status description in English'
+ *                 }
  *              
  * @exception Error
  *  Thrown if the parameter is null, not of the proper type or if any of the
@@ -79,18 +79,27 @@ proto.setStatus = function(o) {
 		throw new Error('o must not be null.');
 	if(typeof o != 'string' && typeof o != 'object')
 		throw new Error('o must be a string or an object.');
-	if(typeof o == 'object' && o.status == null && o.show == null)
-		throw new Error('o must provide either the "status" or ' +
+	if(typeof o == 'object' && o.description == null && o.show == null)
+		throw new Error('o must provide either the "description" or ' +
 			'the "show" property or both.');
 	var p = {};
 	if(typeof o == 'string')
 		p.status = o;
 	else {
-		if(o.status != null)
-			p.status = o.status;
+		if(o.description != null)
+			p.status = o.description;
 		if(o.show != null)
 			p.show = o.show;
 	}
+	this._presence(p);
+};
+
+proto.getStatus = function(contact, cb) {
+	if(contact == null)
+		throw new Error('contact must not be null.');
+	if(typeof contact != 'string')
+		throw new Error('contact must be a string.');
+	var p = { type: 'probe', to: contact };
 	this._presence(p);
 };
 
@@ -267,6 +276,10 @@ proto._onMessage = function(stanza) {
 proto._onPresence = function(stanza) {
 	console.log('Neue Presence ----');
 	console.log(stanza);
+	// Status notifications don't have the 'type' attribute.
+	if(stanza.attributes.type == null)
+		this._handleStatusNotification(stanza);
+	
 };
 
 /**
@@ -277,6 +290,9 @@ proto._onPresence = function(stanza) {
  *  References the XmppIM instance.
  */
 proto._onReady = function() {
+	// Shortcut for convenience
+	this.jid = this._core.jid;
+	
 	// Request roster on login.
 	this._retrieveRoster();
 	
@@ -284,6 +300,30 @@ proto._onReady = function() {
 	this._presence();
 	
 	this.emit('ready');
+};
+
+/**
+ * Presence Information
+ */
+
+/**
+ * Parses the specified status notification and emits the parsed data as
+ * part of the public 'status' event.
+ * 
+ * @param stanza
+ *  A 'presence' stanza which contains status information of a contact.
+ * @this
+ *  References the XmppIM instance.
+ */
+proto._handleStatusNotification = function(stanza) {
+	var from = stanza.attributes.from;
+	// Ignore our own status changes.
+	if(from == this.jid)
+		return;
+	// Parse notification
+	console.log('Got a status notification from ' + from);
+	
+	// Emit the 'status' event.
 };
 
 /**
