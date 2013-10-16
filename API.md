@@ -36,7 +36,45 @@ The module exports a class *XmppIM* which exposes the following public interface
  
 **Methods**
 
+- **XmppIM(object opts)**
+
+ Constructs a new XmppIM object using the specified set of options.
+ 
+ *param opts*  
+  A set of options, some of which are required:
+    * 'host'  
+       specifies the hostname of the XMPP server.
+    * 'user'  
+       the username to connect with.
+    * 'password'  
+       the password for the username.
+    * 'port'  
+       the port on which to connect. Defaults to 5222, if not specified. 
+
 - **setStatus(object status)**
+
+ Sets the availability status of the client.
+ 
+ *param status*  
+ A string specifying a natural-language description of the availability
+ status or an object made up of the following fields, at least one of
+ which must be provided:
+   * 'show'  
+      specifies the particular availability status of the client.
+      Can be one of the following values:
+      - 'away' (user is away)
+      - 'chat' (user is interested in chatting)
+      - 'dnd'  (user is busy, do not disturb)
+      - 'xa'   (user has been away for an extended period)
+
+    * 'description'  
+       a string specifying a natural-language description of the
+       availability status or an object literal in the form of:  
+       { 'de': 'Statusbeschreibung auf Deutsch', 'en': 'Status description in English' }
+
+ *exception Error*  
+ Thrown if the parameter is null, not of the proper type or if any of the
+ parameter's fields contain invalid values.
 
 - **sendMessage(string to, object message)**
 
@@ -68,4 +106,8 @@ The module exports a class *XmppIM* which exposes the following public interface
  *Exception Error*  
   Thrown if either argument is null or undefined or if any of the
   arguments fields or values are invalid.
+  
+- **close()**
+
+  Closes the connection to the XMPP server.
 
