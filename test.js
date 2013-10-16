@@ -20,4 +20,7 @@ client.on('ready', function(info) {
  }).on('status', function(contact, status) {
 	console.log(contact + ' hat seinen Status geändert:');
 	console.log(status);
+ }).on('message', function(message) {
+	console.log('Neue Nachricht von ' + message.from);
+	console.log(message);
  });

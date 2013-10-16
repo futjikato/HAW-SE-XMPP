@@ -36,3 +36,13 @@ The API description can be found [here](API.md).
       console.log('My contact-list:');
       console.log(info.roster);
     });
+    
+    client.on('status', function(who, status) {
+      console.log(who + '\'s status has changed:');
+      console.log(status);
+    });
+    
+    client.on('message', function(message) {
+      console.log('New message from ' + message.from);
+      console.log(message);
+    });

@@ -21,5 +21,20 @@ The module exports a class *XmppIM* which exposes the following public interface
  the optional field 'show' which, if present, contains the away status of the
  contact.
  
+ - **'message'** (object message)
+ 
+ Emitted when a new chat message has been received. The parameter *'message'* is
+ an object made up of the properties *'from'* which contains the JID of the sender
+ of the message, *'type'* which contains the type of the message and the fields
+ *'subject'* and *'body'* which contain the subject and body of the message,
+ respectively.
+ 
+ - **'error'** (object error)
+ 
+ Emitted when an error occurs. The parameter error is an Error object.
+ 
+ 
 **Methods**
+
+- **setStatus(object status)**
 

@@ -268,12 +268,47 @@ proto._iq = function(attr, data, cb) {
  *  References the XmppIM instance.
  */
 proto._onMessage = function(stanza) {
-	console.log('Neue Nachricht ----');
-	console.log(stanza);
-	
+	// Ignore messages without subject and body.
+	// FIXME: should we do this?
+	if(stanza.subject == null && stanza.body == null)
+		return;	
 	// Parse message.
-	
-	// Emit 'message' event.
+	var o = { from: stanza.attributes.from || '',
+		subject: '', subjects: { _default: '' },
+		body: '', bodies: { _default: '' },
+		type: stanza.attributes.type || 'normal' };
+	if(stanza.thread != null)
+		o.thread = stanza.thread.text;
+	if(stanza.subject != null) {
+		if(stanza.subject instanceof Array) {
+			for(var i in stanza.subject) {
+				var tmp = stanza.subject[i];
+				var lang = tmp.attributes['xml:lang'];
+				if(lang == null)
+					continue;
+				o.subjects[lang] = tmp.text;
+			}
+		} else {
+			o.subject = stanza.subject.text;
+			o.subject._default = o.subject;
+		}
+	}
+	if(stanza.body != null) {
+		if(stanza.body instanceof Array) {
+			for(var i in stanza.body) {
+				var tmp = stanza.body[i];
+				var lang = tmp.attributes['xml:lang'];
+				if(lang == null)
+					continue;
+				o.bodies[lang] = tmp.text;
+			}
+		} else {
+			o.body = stanza.body.text;
+			o.bodies._default = o.body;
+		}		
+	}
+	// Emit the 'message' event.
+	this.emit('message', o);
 };
 
 /**
