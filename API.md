@@ -42,29 +42,30 @@ The module exports a class *XmppIM* which exposes the following public interface
 
  Sends the specified chat message to the specified recipient.
   
- param to
-  A string that specifies the JID of the recipient of the message.
- param message
+ *param to*  
+ A string that specifies the JID of the recipient of the message.  
+
+ *param message*  
   This can either be a string in which case it specifies the message's
-  body or object made up of the following fields, all of which are optional:
-   'type'     specifies the type of the message. Possible values are:
-              'chat', 'error', 'groupchat', 'headline' or 'normal'. If this
-              is not specified, it defaults to 'normal'.
-   'thread'   the identifier of the conversation thread this message should
-              be added to (optional).
-   'subject'  the subject of the message (optional). If specified, this can
-              either be a string or an object literal in the form of:
-              {
-                'de': 'Deutscher Text',
-                'en': 'English Text'
-              }
-   'body'     the body of the message (optional). If specified, this can
-              either be a string or an object literal in the form of:
-              {
-                'de': 'Deutscher Text',
-                'en': 'English Text'
-              }
- Exception Error
+  body or an object made up of the following fields, all of which are optional:  
+
+    * 'type'  
+      specifies the type of the message. Possible values are:
+      'chat', 'error', 'groupchat', 'headline' or 'normal'. If this is not specified,
+      it defaults to 'normal'.
+    * 'thread'  
+      the identifier of the conversation thread this message should
+      be added to (optional).  
+    * 'subject'  
+      the subject of the message (optional). If specified, this can
+      either be a string or an object literal in the form of:  
+      {  'de': 'Deutscher Text', 'en': 'English Text'  }  
+    * 'body'  
+     the body of the message (optional). If specified, this can
+     either be a string or an object literal in the form of:  
+     {  'de': 'Deutscher Text',  'en': 'English Text'  }  
+
+ *Exception Error*  
   Thrown if either argument is null or undefined or if any of the
   arguments fields or values are invalid.
 

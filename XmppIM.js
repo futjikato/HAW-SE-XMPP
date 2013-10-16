@@ -1,7 +1,7 @@
 /**
  * @authors     Torben Könke <torben.koenke@haw-hamburg.de>,
  * @date        14-10-13
- * @modified	15-10-13 15:26
+ * @modified    16-10-13 16:42
  * 
  * Implements the basic instant messaging (IM) and presence functionality of the
  * Extensible Messaging and Presence Protocol (XMPP) as defined per RFC 3921.
@@ -121,7 +121,7 @@ proto.getStatus = function(contact, cb) {
  *  A string that specifies the JID of the recipient of the message.
  * @param message
  *  This can either be a string in which case it specifies the message's
- *  body or object made up of the following fields, all of which are optional:
+ *  body or an object made up of the following fields, all of which are optional:
  *   'type'     specifies the type of the message. Possible values are:
  *              'chat', 'error', 'groupchat', 'headline' or 'normal'. If this
  *              is not specified, it defaults to 'normal'.
@@ -164,6 +164,16 @@ proto.sendMessage = function(to, message) {
 			o.body = message.body;
 		}
 	this._message(o);
+};
+
+/**
+ * Closes the connection with the XMPP server.
+ */
+proto.close = function() {
+	// Gracefully log off from the server.
+	this._presence({type: 'unavailable'});
+	// Close the connection.
+	this._core.close();
 };
 
 /**

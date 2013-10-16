@@ -17,7 +17,12 @@ client.on('ready', function(info) {
 		show: 'away',
 		description: 'Ich bin nicht da...'
 	});
-		
+	
+	// Nach 5 Sekunden beenden.
+	setTimeout(function() {
+		client.close();
+	}, 5000);
+			
  }).on('status', function(contact, status) {
 	console.log(contact + ' hat seinen Status geändert:');
 	console.log(status);

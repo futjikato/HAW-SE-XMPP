@@ -1,7 +1,7 @@
 /**
  * @authors     Torben Könke <torben.koenke@haw-hamburg.de>,
  * @date        12-10-13
- * @modified	14-10-13 14:11
+ * @modified    16-10-13 16:40
  * 
  * Implements the core features of the Extensible Messaging and Presence
  * Protocol (XMPP) as defined per RFC 3920.
@@ -101,6 +101,17 @@ var proto = XmppCore.prototype;
  */
 proto.connect = function() {
 	this._init();
+};
+
+/**
+ * Closes the connection with the server.
+ */
+proto.close = function() {
+	if(this._xml != null)
+		this._xml.unpipe(this._sock);
+	// Close the XML stream.
+	if(this._sock != null)
+		this._sock.write('</stream:stream>');
 };
 
 /**
