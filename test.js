@@ -17,6 +17,7 @@ client.on('ready', function(info) {
 		show: 'away',
 		description: 'Ich bin nicht da...'
 	});
+		
  }).on('status', function(contact, status) {
 	console.log(contact + ' hat seinen Status geändert:');
 	console.log(status);
@@ -24,3 +25,4 @@ client.on('ready', function(info) {
 	console.log('Neue Nachricht von ' + message.from);
 	console.log(message);
  });
+

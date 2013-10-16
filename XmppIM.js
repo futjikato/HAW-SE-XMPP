@@ -53,6 +53,10 @@ var proto = XmppIM.prototype;
  *               server has been completed and messages can be sent.
  *  'status'     emitted when the status of a contact of the client
  *               has changed. 
+ *  'message'    emitted when a new chat message for the client has
+ *               been received.
+ *  'error'      emitted when an unrecoverable error has occurred and
+ *               the connection to the server has been closed.
  */
 
 /**
@@ -108,6 +112,58 @@ proto.getStatus = function(contact, cb) {
 		throw new Error('contact must be a string.');
 	var p = { type: 'probe', to: contact };
 	this._presence(p);
+};
+
+/**
+ * Sends the specified chat message to the specified recipient.
+ * 
+ * @param to
+ *  A string that specifies the JID of the recipient of the message.
+ * @param message
+ *  This can either be a string in which case it specifies the message's
+ *  body or object made up of the following fields, all of which are optional:
+ *   'type'     specifies the type of the message. Possible values are:
+ *              'chat', 'error', 'groupchat', 'headline' or 'normal'. If this
+ *              is not specified, it defaults to 'normal'.
+ *   'thread'   the identifier of the conversation thread this message should
+ *              be added to (optional).
+ *   'subject'  the subject of the message (optional). If specified, this can
+ *              either be a string or an object literal in the form of:
+ *              {
+ *                'de': 'Deutscher Text',
+ *                'en': 'English Text'
+ *              }
+ *   'body'     the body of the message (optional). If specified, this can
+ *              either be a string or an object literal in the form of:
+ *              {
+ *                'de': 'Deutscher Text',
+ *                'en': 'English Text'
+ *              }
+ * @exception Error
+ *  Thrown if either argument is null or undefined or if any of the
+ *  arguments fields or values are invalid.
+ */
+proto.sendMessage = function(to, message) {
+	if(to == null || message == null)
+		throw new Error('The arguments must not be null.');
+	if(typeof to != 'string')
+		throw new Error('to must be a string.');
+	if(typeof message != 'string' && typeof message != 'object')
+		throw new Error('message must be a string or an object.');
+	var o = { 'to': to };
+	if(typeof message == 'string')
+		o.body = message;
+	else {
+		if(message.type != null)
+			o.type = message.type;
+		if(message.thread != null)
+			o.thread = message.thread;
+		if(message.subject != null)
+			o.subject = message.subject;
+		if(message.body != null)
+			o.body = message.body;
+		}
+	this._message(o);
 };
 
 /**
