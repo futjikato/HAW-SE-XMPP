@@ -1,5 +1,5 @@
 /**
- * @authors     Torben Könke <torben.koenke@haw-hamburg.de>
+ * @authors     Torben KÃ¶nke <torben.koenke@haw-hamburg.de>
  * @date        12-10-13
  * @modified    15-10-13 12:42
  * 

@@ -1,13 +1,38 @@
-HAW-SE-XMPP
-===========
+### Introduction
 
-branch zum Entwickeln der XMPP Bibliothek.
+This repository contains an easy-to-use and well-documented node.js module for
+communicating and exchanging messages with an XMPP server.
 
-Benötigte node.js Module:
+### Usage
+
+The module depends on the following list of modules all of which can be
+installed with **npm**:
 
  * sax-js	(npm install sax)
  * json2xml	(npm install json2xml)
  * extend	(npm install extend)
  * starttls	(npm install starttls)
+ 
+The module exports a single class which can be referenced by simply
+requiring *XmppIm*.
+ 
+### API
 
-Zum testen in der Konsole 'node test.js' aufrufen.
+The API description can be found [here](API.md).
+
+### Example
+
+    var XmppIM = require('./XmppIM');
+    
+    var client = new XmppIM({
+      host:     'twattle.net',
+      user:     'myUsername',
+      password: 'myPassword'
+    });
+    
+    client.on('ready', function(info) {
+      console.log('Connected as ' + info.jid);
+
+      console.log('My contact-list:');
+      console.log(info.roster);
+    });

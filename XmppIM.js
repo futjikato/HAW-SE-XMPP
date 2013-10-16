@@ -1,5 +1,5 @@
 /**
- * @authors     Torben Könke <torben.koenke@haw-hamburg.de>,
+ * @authors     Torben KÃ¶nke <torben.koenke@haw-hamburg.de>,
  * @date        14-10-13
  * @modified	15-10-13 15:26
  * 
@@ -46,6 +46,13 @@ var proto = XmppIM.prototype;
 
 /**
  **** Public API ****
+ *
+ * Public events which may be subscribed to:
+ * 
+ *  'ready'      emitted when the initial negotiation with the XMPP
+ *               server has been completed and messages can be sent.
+ *  'status'     emitted when the status of a contact of the client
+ *               has changed. 
  */
 
 /**
@@ -263,6 +270,10 @@ proto._iq = function(attr, data, cb) {
 proto._onMessage = function(stanza) {
 	console.log('Neue Nachricht ----');
 	console.log(stanza);
+	
+	// Parse message.
+	
+	// Emit 'message' event.
 };
 
 /**
@@ -290,16 +301,18 @@ proto._onPresence = function(stanza) {
  *  References the XmppIM instance.
  */
 proto._onReady = function() {
-	// Shortcut for convenience
-	this.jid = this._core.jid;
+	// Shortcut for convenience.
+	this._jid = this._core.jid;
 	
-	// Request roster on login.
-	this._retrieveRoster();
-	
-	// Announce initial presence (Refer to XMPP-IM 'Initial Presence').
-	this._presence();
-	
-	this.emit('ready');
+	// Request roster on login (as recommended in XMPP-IM).
+	this._retrieveRoster(function(success, roster) {			
+		// Announce initial presence
+		// (Refer to XMPP-IM 'Initial Presence').
+		this._presence();
+		
+		// Emit the public 'ready' event.
+		this.emit('ready', { jid: this._jid, 'roster': roster });
+	});	
 };
 
 /**
@@ -318,12 +331,29 @@ proto._onReady = function() {
 proto._handleStatusNotification = function(stanza) {
 	var from = stanza.attributes.from;
 	// Ignore our own status changes.
-	if(from == this.jid)
+	if(from == this._jid)
 		return;
-	// Parse notification
-	console.log('Got a status notification from ' + from);
-	
+	// Parse notification.
+	var o = { available: stanza.show == null, description: '',
+		descriptions: { _default: '' } };
+	if(stanza.show != null)
+		o.show = stanza.show.text;
+	if(stanza.status != null) {
+		if(stanza.status instanceof Array) {
+			for(var i in stanza.status) {
+				var tmp = stanza.status[i];
+				var lang = tmp.attributes['xml:lang'];
+				if(lang == null)
+					continue;
+				o.descriptions[lang] = tmp.text;
+			}
+		} else {
+			o.description = stanza.status.text;
+			o.descriptions._default = o.description;
+		}
+	}	
 	// Emit the 'status' event.
+	this.emit('status', from, o);
 };
 
 /**
@@ -344,10 +374,10 @@ proto._retrieveRoster = function(cb) {
 		if(cb == null)
 			return;
 		if(success !== true)
-			cb(false, node);
+			cb.call(this, false, node);
 		// Parse response and hand parsed roster to callback.
 		else
-			cb(true, this._parseRoster(node.query));
+			cb.call(this, true, this._parseRoster(node.query));
 	});
 };
 
