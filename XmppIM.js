@@ -1,7 +1,7 @@
 /**
  * @authors     Torben Könke <torben.koenke@haw-hamburg.de>,
  * @date        14-10-13
- * @modified    16-10-13 16:42
+ * @modified    17-10-13 17:25
  * 
  * Implements the basic instant messaging (IM) and presence functionality of the
  * Extensible Messaging and Presence Protocol (XMPP) as defined per RFC 3921.
@@ -16,7 +16,7 @@ var XmppCore = require('./XmppCore');
  * @param opts
  *  A set of options, some of which are required:
  *   'host'      specifies the hostname of the XMPP server.
- *   'jid'       the bare jid/username to connect with.
+ *   'user'      the local part of the jid to connect with.
  *   'password'  the password for the respective jid.
  *  optional:
  *   'port'      the port on which to connect. Defaults to 5222,
@@ -57,6 +57,14 @@ var proto = XmppIM.prototype;
  *               been received.
  *  'error'      emitted when an unrecoverable error has occurred and
  *               the connection to the server has been closed.
+ *  'authorize'  emitted when another user has requested authorization
+ *               for receiving status information of the client.
+ *  'authorized' emitted when a previously issued authorize request
+ *               of the client has been accepted by the respective
+ *               contact.
+ *  'refused'    emitted when a previously issued authorize request
+ *               of the client has been denied by the respective
+ *               contact.
  */
 
 /**
@@ -164,6 +172,69 @@ proto.sendMessage = function(to, message) {
 			o.body = message.body;
 		}
 	this._message(o);
+};
+
+/**
+ * Adds the contact with the specified JID to the client's roster and
+ * sends an authorization request to the contact.
+ * 
+ * @param jid
+ *  The JID of the contact to add.
+ * @param item
+ *  If specified, this parameter is an object made up of the following
+ *  fields, all of which are optional:
+ *   'name'     the name under which the contact will be added to the
+ *              client's contact list.
+ *   'groups'   An array of strings each of which specifies the name
+ *              of a group the contact will be added to.
+ *  The item parameter is optional and may be omitted.
+ *  @exception Error
+ *   Thrown if either argument is null or undefined or if any of the
+ *   arguments fields or values are invalid.
+ */
+proto.addContact = function(jid, item) {
+	if(jid == null)
+		throw new Error('jid must not be null.');
+	if(typeof jid != 'string')
+		throw new Error('jid must be a string.');
+	if(item != null && typeof item != 'object')
+		throw new Error('item must be an object.');
+	var o = { item: [], attr: { 'jid': jid } };
+	if(item != null) {
+		if(item.name != null)
+			o.attr.name = item.name;
+		if(item.groups != null) {
+			for(var i in item.groups)
+				o.item.push({group: item.groups[i]});
+		}
+	}
+	var query = { 'query': o, attr: { 'xmlns': 'jabber:iq:roster' }};
+	// Perform a 'roster set' for the new roster item.
+	this._iq({ type: 'set' }, query, function(success, node) {
+		// Request a subscription from the contact.
+		this._presence({ to: jid, type: 'subscribe' });
+	});	
+};
+
+/**
+ * Removes the contact with the specified JID from the client's roster.
+ * 
+ * @param jid
+ *  The JID of the contact to remove.
+ * @exception Error
+ *  Thrown if the jid argument is null or undefined.
+ */
+proto.removeContact = function(jid) {
+	if(jid == null)
+		throw new Error('jid must not be null.');
+	if(typeof jid != 'string')
+		throw new Error('jid must be a string.');
+	var query = { 'query': {'item' : '',
+		attr: {'jid': jid, 'subscription': 'remove'}},
+		attr: {'xmlns': 'jabber:iq:roster'} };
+	this._iq({ type: 'set' }, query, function(success, node) {
+		// FIXME: What do we do if this fails?
+	});
 };
 
 /**
@@ -315,13 +386,14 @@ proto._presence = function(o) {
  * @this
  *  References the XmppIM instance. 
  * @exception Error
- *  Thrown if the 'data' or 'cb' parameters are null or undefined.
+ *  Thrown if the 'data' parameter are null or undefined.
  */
 proto._iq = function(attr, data, cb) {
 	// Call callback in the context of the XmppIM instance.
 	var that = this;
 	this._core.iq(attr, data, function(success, node) {
-		cb.call(that, success, node);
+		if(cb != null)
+			cb.call(that, success, node);
 	});
 };
 
@@ -388,10 +460,18 @@ proto._onMessage = function(stanza) {
 proto._onPresence = function(stanza) {
 	console.log('Neue Presence ----');
 	console.log(stanza);
+	var type = stanza.attributes.type;
 	// Status notifications don't have the 'type' attribute.
-	if(stanza.attributes.type == null)
-		this._handleStatusNotification(stanza);
-	
+	if(type == null)
+		return this._handleStatusNotification(stanza);
+	type = type.toLowerCase();
+	var calltable = {
+		'subscribe':    this._handleSubscribeRequest,
+		'subscribed':   this._handleSubscribed,
+		'unsubscribed': this._handleUnsubscribed
+	};
+	if(calltable[type] != null)
+		calltable[type].call(this, stanza);	
 };
 
 /**
@@ -455,6 +535,83 @@ proto._handleStatusNotification = function(stanza) {
 	}	
 	// Emit the 'status' event.
 	this.emit('status', from, o);
+};
+
+/**
+ * Parses the specified subscription request and emits an 'authorize'
+ * event.
+ * 
+ * @param stanza
+ *  A 'presence' stanza of type 'subscribe'.
+ * @this
+ *  References the XmppIM instance.
+ */
+proto._handleSubscribeRequest = function(stanza) {
+	var from = stanza.attributes.from;
+	// If the stanza for some reason does not have the 'from'-attribute
+	// silently ignore it.
+	if(from == null)
+		return;
+	var that = this;
+	var o = { 'from': from,
+		'accept': function(item) {
+			// Issue a 'roster set'.
+			var o = { item: [], attr: { 'jid': from } };			
+			if(item != null && typeof item == 'object') {
+				if(item.name != null)
+					o.attr.name = item.name;
+				if(item.groups != null) {
+					for(var i in item.groups)
+						o.item.push({group: item.groups[i]});
+				}
+			}
+			var query = { 'query': o, attr: { 'xmlns': 'jabber:iq:roster' }};
+			that._iq({ type: 'set' }, query);
+			// Acknowledge the authorization request.
+			that._presence({ to:from, type: 'subscribed' });
+		},
+		'deny': function() {
+			// Deny the authorization request.
+			that._presence({ to:from, type: 'unsubscribed' });
+		}
+	};
+	this.emit('authorize', o);
+};
+
+/**
+ * Handles acceptance of a previous subscription request and emits an
+ * 'authorized' event.
+ * 
+ * @param stanza
+ *  A 'presence' stanza of type 'subscribed'.
+ * @this
+ *  References the XmppIM instance.
+ */
+proto._handleSubscribed = function(stanza) {
+	var from = stanza.attributes.from;
+	// If the stanza for some reason does not have the 'from'-attribute
+	// silently ignore it.
+	if(from == null)
+		return;
+	this.emit('authorized', from);
+};
+
+/**
+ * Handles refusal of a previous subscription request and emits an
+ * 'authorized' event.
+ * 
+ * @param stanza
+ *  A 'presence' stanza of type 'unsubscribed'.
+ * @this
+ *  References the XmppIM instance.
+ */
+proto._handleUnsubscribed = function(stanza) {
+	var from = stanza.attributes.from;
+	// If the stanza for some reason does not have the 'from'-attribute
+	// silently ignore it.
+	if(from == null)
+		return;
+	this.emit('refused', from);	
 };
 
 /**

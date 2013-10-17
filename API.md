@@ -106,8 +106,43 @@ The module exports a class *XmppIM* which exposes the following public interface
  *Exception Error*  
   Thrown if either argument is null or undefined or if any of the
   arguments fields or values are invalid.
-  
+
+- **addContact(string jid, object item)**
+ 
+ Adds the contact with the specified JID to the client's roster and
+ sends an authorization request to the contact.
+
+ *param jid*  
+ A string that specifies the JID of the contact to add.  
+
+ *param item*  
+  If specified, this parameter is an object made up of the following
+  fields, all of which are optional:  
+
+    * 'name'  
+      the name under which the contact will be added to the
+      client's contact list.
+    * 'groups'  
+      An array of strings each of which specifies the name
+      of a group the contact will be added to.
+
+ The item parameter is optional and may be omitted.
+ 
+ *Exception Error*  
+  Thrown if the jid argument is null or undefined or if any of the
+  arguments fields or values are invalid. 
+
+- **removeContact(string jid)**
+
+ Removes the contact with the specified JID from the client's roster.
+
+ *param jid*  
+ A string that specifies the JID of the contact to remove from the
+ client's roster.  
+
+ *Exception Error*  
+  Thrown if the jid argument is null or undefined.
+   
 - **close()**
 
   Closes the connection to the XMPP server.
-
