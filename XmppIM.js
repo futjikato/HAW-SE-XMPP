@@ -238,6 +238,23 @@ proto.removeContact = function(jid) {
 };
 
 /**
+ * Retrieves the client's roster (contact list).
+ * 
+ * @param cb
+ *  A callback method invoked once the roster has been retrieves from
+ *  the server.
+ * @exception Error
+ *  Thrown if the cb parameter is null or invalid.
+ */
+proto.getRoster = function(cb) {
+	if(cb == null)
+		throw new Error('cb must not be null.');
+	if(typeof cb != 'function')
+		throw new Error('cb must be a function.');
+	this._retrieveRoster(cb);
+};
+
+/**
  * Closes the connection with the XMPP server.
  */
 proto.close = function() {

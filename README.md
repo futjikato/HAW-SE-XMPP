@@ -46,3 +46,6 @@ The API description can be found [here](API.md).
       console.log('New message from ' + message.from);
       console.log(message);
     });
+    
+For a more elaborate example, take a look at the [xmppcl](xmppcl.js) program
+which implements a simple XMPP command-line client.

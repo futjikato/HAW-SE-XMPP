@@ -2,8 +2,8 @@
 var XmppIM = require('./XmppIM');
 
 var client = new XmppIM({
-	host: 'twattle.net',
-	user: 'twat20',
+	host:     'twattle.net',
+	user:     'twat20',
 	password: 'twat20'
 });
 
@@ -24,10 +24,14 @@ client.on('ready', function(info) {
 		client.close();
 	}, 5000);
 */			
- }).on('status', function(contact, status) {
+ });
+ 
+client.on('status', function(contact, status) {
 	console.log(contact + ' hat seinen Status geändert:');
 	console.log(status);
- }).on('message', function(message) {
+ });
+ 
+client.on('message', function(message) {
 	console.log('Neue Nachricht von ' + message.from);
 	console.log(message);
  });
@@ -43,9 +47,11 @@ client.on('authorize', function(request) {
 });
 
 client.on('authorized', function(name) {
-	console.log(name + ' hat deine Authorisierungsanfrage akzeptiert.');
+	console.log(name +
+			' hat deine Authorisierungsanfrage akzeptiert.');
 });
 
 client.on('refused', function(name) {
-	console.log(name + ' hat deine Authorisierungsanfrage abgelehnt.');
+	console.log(name +
+			' hat deine Authorisierungsanfrage abgelehnt.');
 });
