@@ -91,7 +91,7 @@ function processLine(line) {
 		global[command](args);
 	else
 		console.log('unknown command, type \'help\' to display a list of ' +
-			'supportd commands.');		
+			'supported commands.');		
 	readLine();
 }
 

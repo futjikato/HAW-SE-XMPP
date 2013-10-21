@@ -33,6 +33,20 @@ The module exports a class *XmppIM* which exposes the following public interface
  
  Emitted when an error occurs. The parameter error is an Error object.
  
+- **'authorize'** (object request)
+
+ Emitted when another user has requested authorization for receiving status
+ information of the client.
+ 
+- **'authorized'** (string jid)
+
+ Emitted when a previously issued authorize request of the client has been
+ accepted by the respective contact.
+ 
+- **'refused'** (string jid)
+
+ Emitted when a previously issued authorize request of the client has been
+ denied by the respective contact.
  
 **Methods**
 
