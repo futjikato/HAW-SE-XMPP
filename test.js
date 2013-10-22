@@ -11,6 +11,7 @@ client.on('ready', function(info) {
 	console.log('Verbunden als ' + info.jid);
 	console.log('Meine Contactlist:');
 	console.log(info.roster);
+	
 			
 /*	
 	// Status auf away setzen.

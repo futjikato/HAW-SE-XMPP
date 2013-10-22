@@ -255,6 +255,47 @@ proto.getRoster = function(cb) {
 };
 
 /**
+ * Blocks communication with the specified contact.
+ * 
+ * @param jid
+ *  The JID of the contact to block.
+ * @param granularity
+ *  This parameter is optional and may be omitted. It is an array of
+ *  identifiers specifying which kinds of stanzas are to be blocked.
+ *  The following values may be specified:
+ *   'message'         blocks incoming message stanzas.
+ *   'iq'              blocks incoming IQ stanzas.
+ *   'presence-in'     blocks incoming presence notifications.
+ *   'presence-out'    blocks outgoing presence notifications.
+ *  @exception Error
+ *   Thrown if the jid paramater is null or undefined or if the
+ *   optional granularity parameter is specified and contains invalid
+ *   values.
+ */
+proto.block = function(jid, granularity) {
+	if(jid == null)
+		throw new Error('jid must not be null.');
+	if(typeof jid != 'string')
+		throw new Error('jid must be a string.');
+	var v = ['message', 'iq', 'presence-in', 'presence-out'];
+	var o = {};
+	if(granularity != null) {
+		if(typeof granularity != 'Array')
+			throw new Error('granularity must be an array.');
+		for(var i in granularity) {
+			if(v.indexOf(granularity[i]) < 0)
+				throw new Error('granularity contains invalid identifiers.');
+			o[granularity[i]] = true;
+		}
+	}
+	// Construct IQ stanza.
+};
+
+proto.unblock = function(jid, granularity) {
+	
+};
+
+/**
  * Closes the connection with the XMPP server.
  */
 proto.close = function() {
@@ -692,6 +733,135 @@ proto._parseRoster = function(query) {
 		ret.push(item);
 	}
 	return ret;
+};
+
+/**
+ * Privacy List Management (For details, refer to XMPP-IM,
+ *  10. Blocking Communication).
+ */
+
+proto._editBlocklist = function() {
+	// Get default list
+	// If does not exist
+	//  create new list
+	//  set list as default list
+	// If does exist
+	//  edit existing list.
+};
+
+/**
+ * Attempts to retrieve the default privacy list.
+ * 
+ * @param cb
+ *  Callback method invoked once the default privacy list has been
+ *  retrieved.
+ * @exception Error
+ *  Thrown if the cb parameter is null or undefined.
+ */
+proto._getDefaultList = function(cb) {
+	if(cb == null)
+		throw new Error('cb must not be null.');
+	var q = { query: '', attr: { 'xmlns': 'jabber:iq:privacy' }};
+	this._iq({ type: 'get' }, q, function(success, node) {
+		if(node.query['default'] == null)
+			return cb.call(this, false);
+		var name = node.query['default'].attributes.name;
+		if(node.query.list != null) {
+			var l = typeof node.query.list == 'object' ?
+					[node.query.list] : node.query.list;
+			for(var i in l) {
+				if(l[i].attributes.name === name)
+					return this._getList(name, cb);
+			}
+		}
+		cb.call(this, false);
+	});	
+};
+
+/**
+ * Retrieves the privacy list with the specified name.
+ * 
+ * @param name
+ *  The name of the privacy list to retrieve.
+ * @param cb
+ *  A callback method invoked once the privacy list has been retrieved.
+ * @exception Error
+ *  Thrown if either parameter is null or undefined.
+ */
+proto._getList = function(name, cb) {
+	if(name == null)
+		throw new Error('name must not be null.');
+	if(cb == null)
+		throw new Error('cb must not be null.');
+	var q = { query: { list: '', attr: {'name': name}},
+			attr: { 'xmlns': 'jabber:iq:privacy'}};
+	this._iq({type: 'get'}, q, function(success, node) {
+		if(success == false)
+			return cb.call(this, false);
+		var list = [];
+		if(node.query.list != null) {
+			if(node.query.list.item != null) {
+				var _l = typeof node.query.list.item == 'object' ?
+						[node.query.list.item] : node.query.list.item;
+				for(var i in _l)
+					list.push(_l[i].attributes);
+			}
+		}
+		return cb.call(this, true, list);
+	});	
+};
+
+/**
+ * Creates the privacy list with the specified name.
+ * 
+ * @param name
+ *  The name of the privacy list to create. If a privacy list with
+ *  the specified name already exists, it will be overwritten.
+ * @param items
+ *  The entries of the privacy list.
+ * @exception Error
+ *  Thrown if the name parameter is null or undefined or if the
+ *  items parameter is null, is not an array or does not at least
+ *  contain one entry.
+ */
+proto._createList = function(name, items) {
+	if(name == null)
+		throw new Error('name must not be null.');
+	if(items == null)
+		throw new Error('items must not be null.');
+	var q = { query: { list: [], attr: {'name': name}},
+			attr: {'xmlns': 'jabber:iq:privacy'}};
+	for(var i in items) {
+		q.query.list.push({ item: '', attr: {
+			type: 'jid',
+			order: i,
+			action: 'deny',
+			value: items[i]
+		}});
+	}
+	console.log(require('json2xml')(q, {attributes_key: 'attr'}));
+};
+
+/**
+ * Removes the privacy list with the specified name.
+ * 
+ * @param name
+ *  The name of the privacy list to remove.
+ * @param cb
+ *  A callback method invoked once the operation has been completed.
+ *  This parameter may be omitted if not needed.
+ * @exception Error
+ *  Thrown if the name parameter is null or undefined.
+ */
+proto._removeList = function(name, cb) {
+	if(name == null)
+		throw new Error('name must not be null.');
+	var q = { query: { list: '', attr: {'name': name}},
+			attr: {'xmlns': 'jabber:iq:privacy'}};
+	this._iq({type: 'set'}, q, function(success, node) {
+		if(cb != null)
+			cb.call(this, success, node);
+	});
 };
 
 module.exports = XmppIM;
