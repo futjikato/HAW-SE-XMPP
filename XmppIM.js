@@ -291,8 +291,41 @@ proto.block = function(jid, granularity) {
 	this._addToBlockList(o);
 };
 
+/**
+ * Unblocks the contact with the specified JID.
+ * 
+ * @param jid
+ *  The JID of the contact to unblock.
+ * @exception Error
+ *  Thrown if the jid parameter is null or undefined or not of
+ *  type string.
+ */
 proto.unblock = function(jid) {
-	
+	if(jid == null)
+		throw new Error('jid must not be null.');
+	if(typeof jid != 'string')
+		throw new Error('jid must be a string.');
+	this._removeFromBlockList(jid);
+};
+
+/**
+ * Retrieves a list of blocked contacts.
+ * 
+ * @param cb
+ *  A callback method invoked once the list of blocked contacts has been
+ *  retrieved. The first parameter of the callback is an array of blocked
+ *  contacts.
+ * @exception Error
+ *  Thrown if the cb parameter is null or undefined.
+ */
+proto.getBlockList = function(cb) {
+	if(cb == null)
+		throw new Error('cb must not be null.');
+	this._getDefaultList(function(success, name, list) {
+		if(success == false)
+			cb.call(this, []);
+		cb.call(this, list);
+	});
 };
 
 /**
@@ -784,6 +817,36 @@ proto._addToBlockList = function(o) {
 			this._createList('_default', [lit]);
 			this._setDefaultList('_default');
 		}
+	});
+};
+
+/**
+ * Removes an entry from the block list.
+ * 
+ * @param jid
+ *  The JID of the contact to unblock.
+ * @exception Error
+ *  Thrown if the jid parameter is null or undefined or not of
+ *  type string.
+ */
+proto._removeFromBlockList = function(jid) {
+	if(jid == null)
+		throw new Error('jid must not be null.');
+	if(typeof jid != 'string')
+		throw new Error('jid must be a string.');
+	this._getDefaultList(function(success, name, list) {
+		var removed = false;
+		if(success == false)
+			return;
+		for(var i in list) {
+			if(list[i].jid == jid) {
+				list.splice(i, 1);
+				removed = true;
+			}
+		}		
+		// Overwrite the old list.
+		if(removed)
+			this._createList(name, list);	
 	});
 };
 
