@@ -803,8 +803,15 @@ proto._getList = function(name, cb) {
 			if(node.query.list.item != null) {
 				var _l = typeof node.query.list.item == 'object' ?
 						[node.query.list.item] : node.query.list.item;
-				for(var i in _l)
-					list.push(_l[i].attributes);
+				for(var i in _l) {
+					var o = { jid: _l[i].attributes.value };
+					var gran = ['message', 'iq', 'presence-in', 'presence-out'];
+					for(var c in gran) {
+						if(_l[i][gran[c]] != null)
+							o[gran[c]] = true;
+					}
+					list.push(o);
+				}
 			}
 		}
 		return cb.call(this, true, list);
@@ -818,7 +825,14 @@ proto._getList = function(name, cb) {
  *  The name of the privacy list to create. If a privacy list with
  *  the specified name already exists, it will be overwritten.
  * @param items
- *  The entries of the privacy list.
+ *  An array of entries of the privacy list. At least one must be
+ *  specified. An entry is an object made up of the following
+ *  fields, the 'jid' field being mandatory:
+ *   'jid'             the JID of the contact to block.
+ *   'message'         blocks incoming message stanzas.
+ *   'iq'              blocks incoming IQ stanzas.
+ *   'presence-in'     blocks incoming presence notifications.
+ *   'presence-out'    blocks outgoing presence notifications.
  * @exception Error
  *  Thrown if the name parameter is null or undefined or if the
  *  items parameter is null, is not an array or does not at least
@@ -829,17 +843,26 @@ proto._createList = function(name, items) {
 		throw new Error('name must not be null.');
 	if(items == null)
 		throw new Error('items must not be null.');
+	if((items instanceof Array) == false)
+		throw new Error('items must be an array.');
+	if(items.length < 1)
+		throw new Error('items must contain at least one entry.');
 	var q = { query: { list: [], attr: {'name': name}},
 			attr: {'xmlns': 'jabber:iq:privacy'}};
 	for(var i in items) {
-		q.query.list.push({ item: '', attr: {
+		var o = { item: {}, attr: {
 			type: 'jid',
 			order: i,
 			action: 'deny',
-			value: items[i]
-		}});
+			value: items[i].jid
+		}};
+		for(var c in items[i]) {
+			if(c != 'jid')
+				o.item[c] = '';
+		}
+		q.query.list.push(o);
 	}
-	console.log(require('json2xml')(q, {attributes_key: 'attr'}));
+	this._iq({type: 'set'}, q);
 };
 
 /**
