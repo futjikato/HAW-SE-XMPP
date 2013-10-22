@@ -258,7 +258,7 @@ proto.getRoster = function(cb) {
  * Blocks communication with the specified contact.
  * 
  * @param jid
- *  The JID of the contact to block.
+ *  A string containing the JID of the contact to block.
  * @param granularity
  *  This parameter is optional and may be omitted. It is an array of
  *  identifiers specifying which kinds of stanzas are to be blocked.
@@ -278,9 +278,9 @@ proto.block = function(jid, granularity) {
 	if(typeof jid != 'string')
 		throw new Error('jid must be a string.');
 	var v = ['message', 'iq', 'presence-in', 'presence-out'];
-	var o = {};
+	var o = { 'jid': jid };
 	if(granularity != null) {
-		if(typeof granularity != 'Array')
+		if(!(granularity instanceof Array))
 			throw new Error('granularity must be an array.');
 		for(var i in granularity) {
 			if(v.indexOf(granularity[i]) < 0)
@@ -288,10 +288,10 @@ proto.block = function(jid, granularity) {
 			o[granularity[i]] = true;
 		}
 	}
-	// Construct IQ stanza.
+	this._addToBlockList(o);
 };
 
-proto.unblock = function(jid, granularity) {
+proto.unblock = function(jid) {
 	
 };
 
@@ -740,13 +740,51 @@ proto._parseRoster = function(query) {
  *  10. Blocking Communication).
  */
 
-proto._editBlocklist = function() {
-	// Get default list
-	// If does not exist
-	//  create new list
-	//  set list as default list
-	// If does exist
-	//  edit existing list.
+/**
+ * Adds an entry to the block list.
+ * 
+ * @param o
+ *  A string or an object specifying the contact to block. If this is
+ *  a string, it is the JID of the contact to block. If this is an
+ *  object, it is made up of the following fields, the 'jid' field being
+ *  mandatory:
+ *   'jid'             the JID of the contact to block.
+ *   'message'         blocks incoming message stanzas.
+ *   'iq'              blocks incoming IQ stanzas.
+ *   'presence-in'     blocks incoming presence notifications.
+ *   'presence-out'    blocks outgoing presence notifications.   
+ *
+ *  If only the 'jid' field is provided, all communication with the
+ *  respective contact will be blocked.
+ * @exception Error
+ *  Thrown if the parameter is null or undefined or contains an invalid
+ *  value.
+ */
+proto._addToBlockList = function(o) {
+	if(o == null)
+		throw new Error('o must not be null.');
+	if(typeof o != 'object' && typeof o != 'string')
+		throw new Error('o must be a string or an object.');
+	var lit = typeof o == 'string' ? { jid: o } : o;
+	var overwritten = false;
+	this._getDefaultList(function(success, name, list) {
+		if(success == true) {
+			for(var i in list) {
+				if(list[i].jid == lit.jid) {
+					list[i] = lit;
+					overwritten = true;
+				}
+			}
+			if(!overwritten)
+				list.push(lit);
+			// Overwrite the old list.
+			this._createList(name, list);
+		} else {
+			// Create new list and set it up as the default list.
+			this._createList('_default', [lit]);
+			this._setDefaultList('_default');
+		}
+	});
 };
 
 /**
@@ -766,16 +804,39 @@ proto._getDefaultList = function(cb) {
 		if(node.query['default'] == null)
 			return cb.call(this, false);
 		var name = node.query['default'].attributes.name;
-		if(node.query.list != null) {
-			var l = typeof node.query.list == 'object' ?
-					[node.query.list] : node.query.list;
-			for(var i in l) {
-				if(l[i].attributes.name === name)
-					return this._getList(name, cb);
+		if(node.query.list == null)
+			return cb.call(this, false);
+		var l = typeof node.query.list == 'object' ?
+				[node.query.list] : node.query.list;
+		for(var i in l) {
+			if(l[i].attributes.name === name) {
+				return this._getList(name, function(success, list) {
+					if(success == false)
+						return cb.call(this, false);
+					return cb.call(this, true, name, list);
+				});
 			}
 		}
 		cb.call(this, false);
-	});	
+	});
+};
+
+/**
+ * Sets the default list to the list with the specified name.
+ * 
+ * @param name
+ *  The name of the list to be made the default list.
+ * @param cb
+ *  A callback method invoked once the operation has completed.
+ * @exception Error
+ *  Thrown if the name parameter is null or undefined.
+ */
+proto._setDefaultList = function(name, cb) {
+	if(name == null)
+		throw new Error('name must not be null.');
+	var q = { query: { 'default': '', attr: {'name': name}},
+			attr: {'xmlns': 'jabber:iq:privacy'}};
+	this._iq({type: 'set'}, q, cb);
 };
 
 /**
@@ -801,8 +862,8 @@ proto._getList = function(name, cb) {
 		var list = [];
 		if(node.query.list != null) {
 			if(node.query.list.item != null) {
-				var _l = typeof node.query.list.item == 'object' ?
-						[node.query.list.item] : node.query.list.item;
+				var _l = node.query.list.item instanceof Array ?
+					node.query.list.item : [node.query.list.item];
 				for(var i in _l) {
 					var o = { jid: _l[i].attributes.value };
 					var gran = ['message', 'iq', 'presence-in', 'presence-out'];
