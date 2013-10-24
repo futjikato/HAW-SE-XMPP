@@ -638,11 +638,11 @@ proto._initExtensions = function(path) {
 			// Javascript closures are tricky; Scopes are function-level,
 			// not block-level. For details, read
 			// http://stackoverflow.com/questions/643542/doesnt-javascript-support-closures-with-local-variables
-			proto[name] = (function(tmp) {
+			proto[name] = (function(tmp, _n) {
 		        return function() {
-		        	tmp[name].apply(tmp, arguments);
+		        	tmp[_n].apply(tmp, arguments);
 		        };
-		    })(ext);
+		    })(ext, name);
 		}
 	}
 };
