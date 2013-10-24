@@ -93,6 +93,8 @@ var proto = XmppCore.prototype;
  *               The first event argument is the stanza received.
  *  'presence'   emitted when a new presence stanza has been received.
  *               The first event argument is the stanza received.
+ *  'iq'         emitted when a new iq request of type 'set' or 'get'
+ *               has been received.
  *  'error'      emitted when an error occurs.
  */
 
@@ -207,7 +209,7 @@ proto._init = function() {
 		         .on_('iq', that, that._onIqStanza)
 		         .on_('message', that, that._onMessageStanza)
 		         .on_('presence', that, that._onPresenceStanza);
-	
+		
 		that._setupConnection.call(that);
 		that.once('_ready', function() {
 			that._debugPrint('XML stream is ready.');
@@ -627,6 +629,12 @@ proto._iq = function(attr, data, cb) {
  *  References the XmppCore instance.
  */
 proto._onIqStanza = function(node) {
+	var isRequest = node.attributes.type.match(/^(set|get)$/i) != null;
+	if(isRequest) {
+		this.emit('iq', node);
+		return;
+	}
+	// It's a response to a previous request.
 	var id = node.attributes.id;
 	if(id == null)
 		return;

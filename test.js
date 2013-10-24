@@ -12,6 +12,8 @@ client.on('ready', function(info) {
 	console.log('Meine Contactlist:');
 	console.log(info.roster);
 
+
+
 /*	
 	// Status auf away setzen.
 	this.setStatus({

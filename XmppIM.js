@@ -1,7 +1,7 @@
 /**
  * @authors     Torben Könke <torben.koenke@haw-hamburg.de>,
  * @date        14-10-13
- * @modified    17-10-13 17:25
+ * @modified    23-10-13 13:08
  * 
  * Implements the basic instant messaging (IM) and presence functionality of the
  * Extensible Messaging and Presence Protocol (XMPP) as defined per RFC 3921.
@@ -30,12 +30,15 @@ function XmppIM(opts) {
 		that._onMessage.call(that, s); })
 		.on('presence', function(s) {
 			that._onPresence.call(that, s); })
+		.on('iq',       function(s) {
+			that._onIq.call(that, s); })
 		.on('ready',    function() {
 			that._onReady.call(that); })
-		.on('error',	function(e) {
+		.on('error',    function(e) {
 			that.emit('error', e); })
 		.connect();
 	this._core = core;
+	this._extensions = [];
 }
 
 /**
@@ -497,6 +500,8 @@ proto._iq = function(attr, data, cb) {
  *  References the XmppIM instance.
  */
 proto._onMessage = function(stanza) {
+	if(this._invokeExtensions('message', stanza))
+		return;
 	// Ignore messages without subject and body.
 	// FIXME: should we do this?
 	if(stanza.subject == null && stanza.body == null)
@@ -549,8 +554,8 @@ proto._onMessage = function(stanza) {
  *  References the XmppIM instance.
  */
 proto._onPresence = function(stanza) {
-	console.log('Neue Presence ----');
-	console.log(stanza);
+	if(this._invokeExtensions('presence', stanza))
+		return;
 	var type = stanza.attributes.type;
 	// Status notifications don't have the 'type' attribute.
 	if(type == null)
@@ -566,6 +571,21 @@ proto._onPresence = function(stanza) {
 };
 
 /**
+ * Callback method invoked when a new iq request stanza has been received.
+ * 
+ * @param stanza
+ *  The 'iq'-stanza received from the server.
+ * @this
+ *  References the XmppIM instance.
+ */
+proto._onIq = function(stanza) {
+	if(this._invokeExtensions('iq', stanza))
+		return;
+	// Nothing to do here, XMPP:IM does not define any set/get
+	// requests that are handled by the client.
+};
+
+/**
  * Callback method invoked when the core-component has finished negotiating
  * the XML stream with the server. At this point, messages may be sent.
  *
@@ -576,6 +596,9 @@ proto._onReady = function() {
 	// Shortcut for convenience.
 	this._jid = this._core.jid;
 	
+	// Initialize extensions.
+	this._initExtensions('./extensions');
+	
 	// Request roster on login (as recommended in XMPP-IM).
 	this._retrieveRoster(function(success, roster) {			
 		// Announce initial presence
@@ -585,6 +608,83 @@ proto._onReady = function() {
 		// Emit the public 'ready' event.
 		this.emit('ready', { jid: this._jid, 'roster': roster });
 	});	
+};
+
+/**
+ * Initializes possible extensions.
+ * 
+ * @param path
+ *  The path at which to look for extensions.
+ * @exception Error
+ *  Thrown if the path parameter is null or undefined.
+ */
+proto._initExtensions = function(path) {
+	if(path == null)
+		throw new Error('path must not be null.');
+	var fs = require('fs');
+	var files = fs.readdirSync(path);
+	for(var i in files) {
+		var _class = require(path + '/' + files[i]);		
+		var ext = new _class(this);
+		this._extensions.push(ext);
+		if(ext.exports == null)
+			continue;
+		for(var c in ext.exports) {
+			var name = ext.exports[c];
+			if(proto[name] != null)
+				throw new Error('prototype conflict for ' + name + '.');
+			if(ext[name] == null || typeof ext[name] != 'function')
+				throw new Error(files[i] + ' has invalid export ' + name + '.');
+			// Javascript closures are tricky; Scopes are function-level,
+			// not block-level. For details, read
+			// http://stackoverflow.com/questions/643542/doesnt-javascript-support-closures-with-local-variables
+			proto[name] = (function(tmp) {
+		        return function() {
+		        	tmp[name].apply(tmp, arguments);
+		        };
+		    })(ext);
+		}
+	}
+};
+
+/**
+ * Invokes the callback method for the specified type for each
+ * registered extension.
+ * 
+ * @param type
+ *  The type of event triggering the callback invocation. Must be
+ *  one of the following: 'message', 'presence', 'iq'.
+ * @param stanza
+ *  The stanza node passed to the callback methods.
+ * @returns
+ *  true if any of the registered extensions handled the stanza
+ *  and it should not be passed on or false if no extensions
+ *  handled the stanza.
+ * @exception Error
+ *  Thrown if either argument is null or undefined or contains
+ *  an invalid value.
+ */
+proto._invokeExtensions = function(type, stanza) {
+	if(type == null)
+		throw new Error('type must not be null.');
+	if(stanza == null)
+		throw new Error('stanza must not be null.');
+	var methods = {
+		'message':  'onMessage',
+		'presence': 'onPresence',
+		'iq':       'onIQ'
+	};
+	if(methods[type] == null)
+		throw new Error('Invalid value for type.');
+	for(var i in this._extensions) {
+		var ext = this._extensions[i];
+		if(ext[methods[type]] == null)
+			continue;
+		var ret = ext[methods[type]].call(ext, stanza);
+		if(ret === true)
+			return true;
+	}
+	return false;
 };
 
 /**
