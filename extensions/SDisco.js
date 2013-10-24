@@ -28,6 +28,9 @@ var proto = SDisco.prototype;
 // Add the following list of methods to the XmppIM class.
 proto.exports = ['_discoverServices'];
 
+//The XML namespace of the extension we're implementing.
+proto.xmlns = 'http://jabber.org/protocol/disco';
+
 /**
  * Callback method invoked whenever an IQ request stanza has been
  * received.
@@ -41,11 +44,27 @@ proto.exports = ['_discoverServices'];
  */
 proto.onIQ = function(stanza) {
 	if(!this._isDisco(stanza))
-		return false;
-	// Handle discovery stanza.
-	
+		return false;	
 	// Construct a list of all installed extensions.
-	return false;
+	var services = [];
+	for(var i in this._im._extensions) {
+		var ext = this._im._extensions[i];
+		if(ext.xmlns != null)
+			services.push(ext.xmlns);
+	}
+	// Construct the IQ response.
+	var q = { query: [], attr: { xmlns: 'http://jabber.org/protocol/disco#info' }};
+	for(var i in services)
+		q.query.push({ 'feature': '', attr: { 'var': services[i]}});
+	// Add the mandatory identity field.
+	q.query.push({ 'identity': '', attr: { 'type': 'pc', name: 'HAW-SE-XMPP',
+		category: 'client'}});
+	// Send the response IQ stanza.
+	var attr = { type: 'result', to: stanza.attributes.from,
+			id: stanza.attributes.id };
+	this._im._iq(attr, q);
+	// Don't pass the stanza on to the next handler.
+	return true;
 };
 
 /**
@@ -70,7 +89,7 @@ proto._isDisco = function(stanza) {
 	var x = stanza.query.attributes.xmlns;
 	if(x == null)
 		return false;
-	return x.indexOf('http://jabber.org/protocol/disco') == 0;
+	return x.indexOf('http://jabber.org/protocol/disco#info') == 0;
 };
 
 /**

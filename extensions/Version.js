@@ -30,6 +30,9 @@ var proto = Version.prototype;
 // Add the following list of methods to the XmppIM class.
 proto.exports = ['getVersion'];
 
+//The XML namespace of the extension we're implementing.
+proto.xmlns = 'jabber:iq:version';
+
 /**
  * Callback method invoked whenever an IQ request stanza has been
  * received.
@@ -47,8 +50,8 @@ proto.onIQ = function(stanza) {
 	// Handle version stanza.
 	var attr = {
 		type: 'result',
-		to: stanza.from,
-		id: stanza.id
+		to: stanza.attributes.from,
+		id: stanza.attributes.id
 	};
 	// FIXME: Where should we store name and version information?
 	// Construct the response.
