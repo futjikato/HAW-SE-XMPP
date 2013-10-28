@@ -12,6 +12,12 @@
     "Eclipse",
     "Nodeclipse"
   ],
+  "dependencies": {
+    "extend": "1.2.1",
+    "sax": "0.5.5",
+    "json2xml": "0.1.1",
+    "starttls": "0.2.1"
+  },
   "author": "",
   "license": "BSD",
   "readmeFilename": "README.md"
