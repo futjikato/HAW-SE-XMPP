@@ -160,7 +160,7 @@ proto._supports = function(jid, xmlns, cb) {
 	if(this._cache[jid] == null) {
 		this._discoverServices(jid, function(success, ret) {
 			if(!success)
-				throw new Error('Service Discovery failed.');
+				return cb(false);
 			that._cache[jid] = ret.features;
 			cb(contains(ret.features, xmlns));
 		});
