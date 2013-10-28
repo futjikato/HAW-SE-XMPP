@@ -624,6 +624,9 @@ proto._initExtensions = function(path) {
 	var fs = require('fs');
 	var files = fs.readdirSync(path);
 	for(var i in files) {
+		var _stat = fs.statSync(path + '/' + files[i]);
+		if(_stat.isFile() == false)
+			continue;
 		var _class = require(path + '/' + files[i]);		
 		var ext = new _class(this);
 		this._extensions.push(ext);

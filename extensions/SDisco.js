@@ -21,12 +21,13 @@ function SDisco(im) {
 	
 	// Store a reference to the XmmpIM instance.
 	this._im = im;
+	this._cache = {};
 }
 
 var proto = SDisco.prototype;
 
 // Add the following list of methods to the XmppIM class.
-proto.exports = ['_discoverServices'];
+proto.exports = ['_discoverServices', '_supports'];
 
 //The XML namespace of the extension we're implementing.
 proto.xmlns = 'http://jabber.org/protocol/disco';
@@ -131,6 +132,60 @@ proto._discoverServices = function(jid, cb) {
 		// Pass constructed object to callback.
 		cb(true, ret);
 	});
+};
+
+/**
+ * Determines whether the specified jid supports the specified extension.
+ * 
+ * @param jid
+ *  The JID to discover the supported services for. Note that this will
+ *  usually be a 'full jid' (i.e. including a resource identifier).
+ * @param xmlns
+ *  The extension namespace to probe for.
+ * @param cb
+ *  A callback method which will be invoked once support has been
+ *  determined.
+ * @exception Error
+ *  Thrown if either parameter is null or undefined.
+ *  
+ */
+proto._supports = function(jid, xmlns, cb) {
+	if(jid == null)
+		throw new Error('jid must not be null.');
+	if(xmlns == null)
+		throw new Error('xmlns must not be null.');
+	if(cb == null)
+		throw new Error('cb must not be null.');
+	var that = this;
+	if(this._cache[jid] == null) {
+		this._discoverServices(jid, function(success, ret) {
+			if(!success)
+				throw new Error('Service Discovery failed.');
+			that._cache[jid] = ret.features;
+			cb(contains(ret.features, xmlns));
+		});
+	} else {
+		cb(contains(this._cache[jid], xmlns));
+	}
+};
+
+/**
+ * Implements a contains method for arrays.
+ * 
+ * @param a
+ *  The array to search.
+ * @param obj
+ *  The object to look for.
+ * @returns
+ *  true if obj is contained in a, otherwise false.
+ */
+function contains(a, obj) {
+    for (var i = 0; i < a.length; i++) {
+        if (a[i] === obj) {
+            return true;
+        }
+    }
+    return false;
 };
 
 module.exports = SDisco;
