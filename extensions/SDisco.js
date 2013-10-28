@@ -141,7 +141,8 @@ proto._discoverServices = function(jid, cb) {
  *  The JID to discover the supported services for. Note that this will
  *  usually be a 'full jid' (i.e. including a resource identifier).
  * @param xmlns
- *  The extension namespace to probe for.
+ *  A string denoting the extension namespace to probe for or an array
+ *  of namespaces to probe for.
  * @param cb
  *  A callback method which will be invoked once support has been
  *  determined.
@@ -162,9 +163,23 @@ proto._supports = function(jid, xmlns, cb) {
 			if(!success)
 				return cb(false);
 			that._cache[jid] = ret.features;
+			if(xmlns instanceof Array) {
+				for(var i in xmlns) {
+					if(!contains(ret.features, xmlns[i]))
+						return cb(false);
+				}
+				return cb(true);
+			}
 			cb(contains(ret.features, xmlns));
 		});
 	} else {
+		if(xmlns instanceof Array) {
+			for(var i in xmlns) {
+				if(!contains(this._cache[jid], xmlns[i]))
+					return cb(false);
+			}
+			return cb(true);
+		}		
 		cb(contains(this._cache[jid], xmlns));
 	}
 };
@@ -181,9 +196,8 @@ proto._supports = function(jid, xmlns, cb) {
  */
 function contains(a, obj) {
     for (var i = 0; i < a.length; i++) {
-        if (a[i] === obj) {
+        if (a[i] === obj)
             return true;
-        }
     }
     return false;
 };

@@ -43,6 +43,9 @@ proto.xmlns = 'http://jabber.org/protocol/si/profile/file-transfer';
  *  extension.
  */
 proto.onIQ = function(stanza) {
+	// TODO:
+	// Check for SI File Transfer requests
+	// Trigger 'file' event with accept/deny methods.
 	return false;
 };
 
@@ -68,15 +71,75 @@ proto.sendFile = function(jid, file, cb) {
 	if(file == null)
 		throw new Error('file must not be null.');
 	if(cb == null)
-		throw new Error('cb must not be null.');	
+		throw new Error('cb must not be null.');
 	
-	// TODO:
 	// Probe for Stream Initiation support.
-	//  [If not supported, fall back to XEP-0066: Out of Band Data]
+	var that = this;
+	this._im._supports(jid,
+		['http://jabber.org/protocol/si',
+		 'http://jabber.org/protocol/si/profile/file-transfer'],
+		 function(supported) {
+			// Fall back to Out-Of-Band Data (XEP-0066)?
+			if(!supported)
+				return cb(false, 'Not supported');
+			that._negotiateStream();
+		}
+	);
+	// TODO:	
 	// Stream Initiation with Profile of File Transfer.
 	// Advertise SOCKS5 and IBB.
 	// Negotiate Method.
 	// Dispatch to negotiated method.
+};
+
+proto._negotiateStream = function() {
+	// Construct the SI request, refer to XEP-0095
+	// (3.2 Negotiating Profile and Stream) for the ugly details.
+	var o = { si: [], attr: {
+		'xmlns':	 'http://jabber.org/protocol/si',
+		'profile':	 'http://jabber.org/protocol/si/profile/file-transfer',
+		'id':		 this._generateId(10),
+		// FIXME: Figure out which MIME type to send.
+		'mime-type': ''
+	}};
+	
+	// FIXME: add description is supplied.
+	o.si.push([{ file: { 'desc': 'FIXME' }, attr: {
+		// FIXME: name and size are mandatory.
+		'name':  'FIXME',
+	   	'size':  '1024',
+	   	'xmlns': 'http://jabber.org/protocol/si/profile/file-transfer'
+	  }}, { feature: { x: { field: [{ option: { value:
+		  'http://jabber.org/protocol/ibb' }}], attr: {
+	    'var':  'stream-method',
+	    'type': 'list-single'
+	  }}, attr: {
+	   	'xmlns': 'jabber:x:data',
+	   	'type': 'form' }
+	  }, attr: {
+	   	'xmlns': 'http://jabber.org/protocol/feature-neg'
+	  }}]);	
+	
+	this._im._iq({type: 'set'}, o, function(success, node) {
+		console.log(success);
+		console.log(node);
+	});
+};
+
+/**
+ * Generates a random id which identifies a stream session.
+ * 
+ * @param length
+ *  The length of the random string to construct.
+ * @returns
+ *  A random string.
+ */
+proto._generateId = function(length) {
+    var s = '';
+    var c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for(var i = 0; i < length; i++)
+        s += c.charAt(Math.floor(Math.random() * c.length));
+    return s;	
 };
 
 module.exports = SIFileTransfer;
