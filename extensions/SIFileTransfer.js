@@ -56,13 +56,22 @@ proto.onIQ = function(stanza) {
 		if(method == null)
 			this._rejectRequest(stanza, 'Not supported.');
 		else {
-			// TODO:
-			// Trigger 'file' event with accept/deny methods.
-//			this._im.emit('file', stanza.attributes.from, request.file);
-			
-			// If user invoked deny method, cancel stream initiation.
-			// If user invoked accept method, complete stream initiation.
-			this._acceptRequest(stanza, method);
+			var that = this;
+			// FIXME: Is this safe for several requests happening at the
+			// same time?
+			var opt = {
+				name: request.file.name,
+				size: request.file.size,
+				accept: function(savePath) {
+					that._acceptRequest(stanza, method);					
+				},
+				deny: function() {
+					// reject the request.
+					that._rejectRequest(stanza, "User declined.");
+				}
+			};
+			// Trigger public 'file' event.
+			this._im.emit('file', stanza.attributes.from, opt);
 		}
 	} catch(e) {
 	}
