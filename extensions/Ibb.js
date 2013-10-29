@@ -36,14 +36,16 @@ proto.onIQ = function(stanza) {
 	return false;
 };
 
-proto._ibb = function(jid, data, cb) {
+proto._ibb = function(jid, file, cb) {
 	if(jid == null)
 		throw new Error('jid must not be null.');
-	if(data == null)
-		throw new Error('data must not be null.');
+	if(file == null)
+		throw new Error('file must not be null.');
 	// Can have more than one bytestream instance at a time
 	// identified by unique SID.
-		
+	console.log('****');
+	console.log('IBB Invoked.');
+	console.log('****');
 	// Open bytestream
 	// Encode data as BASE64 chunks
 	// Transfer BASE64 chunks

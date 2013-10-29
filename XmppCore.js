@@ -593,7 +593,7 @@ proto._write = function(json, opts) {
 	if(opts.dontClose === true)
 		xml = xml.replace(/\/>$/, '>');
 	if(this._debug === true)
-		console.log('C -> ' + xml);
+		console.log("\nC -> " + xml);
 	this._sock.write(xml);
 };
 
