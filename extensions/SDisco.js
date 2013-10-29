@@ -57,6 +57,8 @@ proto.onIQ = function(stanza) {
 	var q = { query: [], attr: { xmlns: 'http://jabber.org/protocol/disco#info' }};
 	for(var i in services)
 		q.query.push({ 'feature': '', attr: { 'var': services[i]}});
+	// Add general stream initiation.
+	q.query.push({ 'feature': '', attr: { 'var': 'http://jabber.org/protocol/si'}});
 	// Add the mandatory identity field.
 	q.query.push({ 'identity': '', attr: { 'type': 'pc', name: 'HAW-SE-XMPP',
 		category: 'client'}});

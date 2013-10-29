@@ -26,10 +26,10 @@ function Ibb(im) {
 
 var proto = Ibb.prototype;
 
-//Add the following list of methods to the XmppIM class.
+// Add the following list of methods to the XmppIM class.
 proto.exports = ['_ibb'];
 
-//The XML namespace of the extension we're implementing.
+// The XML namespace of the extension we're implementing.
 proto.xmlns = 'http://jabber.org/protocol/ibb';
 
 proto.onIQ = function(stanza) {

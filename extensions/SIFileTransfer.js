@@ -45,10 +45,28 @@ proto.xmlns = 'http://jabber.org/protocol/si/profile/file-transfer';
  *  extension.
  */
 proto.onIQ = function(stanza) {
-	// TODO:
-	// Check for SI File Transfer requests
-	// Trigger 'file' event with accept/deny methods.
-	return false;
+	// Check if it's a SI File Transfer request.
+	if(!this._isSIFileRequest(stanza))
+		return false;
+	try {
+		var request = this._parseSIRequest(stanza);	
+		// Check if we support any of the proposed transfer methods.
+		var method = this._selectMethod(request.methods);
+		// Reject stream initiation.
+		if(method == null)
+			this._rejectRequest(stanza, 'Not supported.');
+		else {
+			// TODO:
+			// Trigger 'file' event with accept/deny methods.
+//			this._im.emit('file', stanza.attributes.from, request.file);
+			
+			// If user invoked deny method, cancel stream initiation.
+			// If user invoked accept method, complete stream initiation.
+			this._acceptRequest(stanza, method);
+		}
+	} catch(e) {
+	}
+	return true;
 };
 
 /**
@@ -89,7 +107,7 @@ proto.sendFile = function(jid, file, cb) {
 		 function(supported) {
 			// Fall back to Out-Of-Band Data (XEP-0066)?
 			if(!supported)
-				return cb(false, 'Not supported');
+				return cb(false, 'Not supported.');
 			that._negotiateStream(jid, stats,
 				_f.description, function(success, method) {
 					// Stream initiation failed.
@@ -177,6 +195,20 @@ proto._buildRequest = function(jid, stats, desc) {
 	return o;
 };
 
+/**
+ * Dispatches to the transfer method negotiated during stream initiation.
+ * 
+ * @param jid
+ *  The JID to initiate a file transfer with. Note that this will
+ *  usually be a 'full jid' (i.e. including a resource identifier).
+ * @param path
+ *  The path of the file to transfer.
+ * @param cb
+ *  The user supplied callback, that is invoked to inform the user
+ *  of file transfer status and progress.
+ * @param method
+ *  The XML namespace of the transfer method that was negotiated.
+ */
 proto._dispatch = function(jid, path, method, cb) {
 	var m = {
 		// FIXME: Add support for SOCKS5.
@@ -229,6 +261,135 @@ proto._getFileStats = function(f) {
 	} catch(e) {
 		return false;
 	}
+};
+
+/**
+ * Determines whether the specified stanza contains a SI file reqest.
+ * 
+ * @param stanza
+ *  The received IQ stanza.
+ */
+proto._isSIFileRequest = function(stanza) {
+	if(stanza.si == null)
+		return false;
+	if(stanza.si.attributes.profile == null)
+		return false;
+	if(stanza.si.attributes.profile !=
+		'http://jabber.org/protocol/si/profile/file-transfer')
+		return false;
+	if(stanza.si.file == null)
+		return false;
+	if(stanza.si.file.attributes.xmlns !=
+		'http://jabber.org/protocol/si/profile/file-transfer')
+		return false;
+	return true;
+};
+
+/**
+ * Parses a SI File Request from the specified stanza.
+ * 
+ * @param stanza
+ *  An IQ stanza containing a SI File Request.
+ * @returns
+ *  An object containing the name and size of the file to be
+ *  transfered as well as a list of proposed transfer methods.
+ */
+proto._parseSIRequest = function(stanza) {
+	var ret = { file: {
+			name: stanza.si.file.attributes.name,
+			size: stanza.si.file.attributes.size
+		},
+		methods: []
+	};
+	if(stanza.si.file.desc != null)
+		ret.file.description = stanza.si.file.desc.text;
+	var opts = stanza.si.feature.x.field.option;
+	if(!(opts instanceof Array))
+		opts = [opts];
+	for(var i in opts)
+		ret.methods.push(opts[i].value.text);
+	return ret;
+};
+
+/**
+ * Selects a method of transfer from the list of proposed methods.
+ * 
+ * @param methods
+ *  A list of transfer methods.
+ * @returns
+ *  The selected method or null if none of the proposed methods is
+ *  supported.
+ */
+proto._selectMethod = function(methods) {
+	if(methods == null)
+		throw new Error('methods must not be null.');
+	if(!(methods instanceof Array))
+		throw new Error('methods must be an array.');
+	// FIXME: Add support for SOCKS5.
+	var supported = ['http://jabber.org/protocol/ibb'];	
+	for(var i in supported) {
+		var m = supported[i];
+		for(var c in methods) {
+			if(methods[c] == m)
+				return m;
+		}
+	}
+	return null;
+};
+
+/**
+ * Rejects the SI File Request contained within the specified stanza.
+ * 
+ * @param stanza
+ *  An IQ stanza containing a SI File Request.
+ * @param reason
+ *  The reason why the request is being rejected.
+ * @exception Error
+ *  Thrown if either parameter is null or undefined.
+ */
+proto._rejectRequest = function(stanza, reason) {
+	if(stanza == null)
+		throw new Error('stanza must not be null.');
+	if(reason == null)
+		throw new Error('reason must not be null.');
+	var e = { error:
+		[ { forbidden: '', attr: {
+			xmlns: 'urn:ietf:params:xml:ns:xmpp-stanzas'
+		}}, {text: reason, attr: {
+			xmlns: 'urn:ietf:params:xml:ns:xmpp-stanzas'}
+		// FIXME: Do some more error differentiating?
+		}], attr: { type: 'cancel', code: 403 }};
+	this._im._iq({ type: 'error', to: stanza.attributes.from,
+		id: stanza.attributes.id }, e);
+};
+
+/**
+ * Completes the stream initiation procecure by accepting the request.
+ * 
+ * @param stanza
+ *  An IQ stanza containing a SI File Request.
+ * @param method
+ *  The selected method to be used for transfering the file.
+ * @exception Error
+ *  Thrown if either parameter is null or undefined.
+ */
+proto._acceptRequest = function(stanza, method) {
+	if(stanza == null)
+		throw new Error('stanza must not be null.');
+	if(method == null)
+		throw new Error('method must not be null.');
+	// Construct and send the stream initiation result.
+	var o = { si: { feature: { x: { field: { value: method }, attr: {
+		'var': 'stream-method'
+	}}, attr: {
+		xmlns: 'jabber:x:data', type: 'submit'
+	}}, attr: {
+		xmlns: 'http://jabber.org/protocol/feature-neg'
+	}}, attr: {
+		xmlns: 'http://jabber.org/protocol/si'
+	}};
+	this._im._iq({ type: 'result', to: stanza.attributes.from,
+		id: stanza.attributes.id }, o);
 };
 
 module.exports = SIFileTransfer;
