@@ -130,12 +130,12 @@ proto.sendFile = function(jid, file, cb) {
 			if(!supported)
 				return cb(false, 'Not supported.');
 			that._negotiateStream(jid, stats,
-				_f.description, function(success, method) {
+				_f.description, function(success, method, sid) {
 					// Stream initiation failed.
 					if(success == false)
 						return cb(false, 'Stream Initiation failed.');
 					// Dispatch to negotiated method.					
-					that._dispatch.call(that, jid, _f.path, method, cb);
+					that._dispatch.call(that, jid, _f.path, method, sid, cb);
 				}
 			);
 		}
@@ -163,13 +163,14 @@ proto._negotiateStream = function(jid, stats, desc, cb) {
 		throw new Error('jid must not be null.');
 	if(stats == null)
 		throw new Error('stats must not be null.');
-	var req = this._buildRequest(jid, stats, desc);
+	var sid = this._generateId(10);
+	var req = this._buildRequest(jid, stats, sid, desc);
 	this._im._iq({type: 'set', to: jid}, req, function(success, node) {
 		if(success == false)
 			return cb(false);
 		var method = node.si.feature.x.field.value.text;
 		// Return negotiated method to caller.
-		return cb(true, method);
+		return cb(true, method, sid);
 	});
 };
 
@@ -182,18 +183,20 @@ proto._negotiateStream = function(jid, stats, desc, cb) {
  * @param stats
  *  An object made up of the fields 'name' and 'size', denoting the
  *  file's name and size, respectively.
+ * @param id
+ *  The id to use for the stream. 
  * @param desc
  *  If supplied, a string containing a description for the file.
  * @returns
  *  The constructed JSON-object.
  */
-proto._buildRequest = function(jid, stats, desc) {
+proto._buildRequest = function(jid, stats, id, desc) {
 	// Construct the SI request, refer to XEP-0095
 	// (3.2 Negotiating Profile and Stream) for the ugly details.
 	var o = { si: [], attr: {
 		'xmlns':	 'http://jabber.org/protocol/si',
 		'profile':	 'http://jabber.org/protocol/si/profile/file-transfer',
-		'id':		 this._generateId(10),
+		'id':		 id,
 		// FIXME: Figure out which MIME type to send?
 		'mime-type': 'application/octet-stream'
 	}};
@@ -230,7 +233,7 @@ proto._buildRequest = function(jid, stats, desc) {
  * @param method
  *  The XML namespace of the transfer method that was negotiated.
  */
-proto._dispatch = function(jid, path, method, cb) {
+proto._dispatch = function(jid, path, method, sid, cb) {
 	var m = {
 		// FIXME: Add support for SOCKS5.
 		'http://jabber.org/protocol/ibb': '_ibb'	
@@ -240,7 +243,7 @@ proto._dispatch = function(jid, path, method, cb) {
 	if(this._im[m[method]] == false)
 		return cb(false, 'Unsupported method.');
 	// Invoke extension.
-	this._im[m[method]](jid, path, cb);
+	this._im[m[method]](jid, path, sid, cb);
 };
 
 /**

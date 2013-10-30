@@ -1,7 +1,7 @@
 /**
  * @authors     Torben Könke <torben.koenke@haw-hamburg.de>,
  * @date        23-10-13
- * @modified    30-10-13 13:12
+ * @modified    30-10-13 15:24
  * 
  * Implements the 'in-band bytestreams' extension of the Extensible
  * Messaging and Presence Protocol (XMPP) as defined per Standards
@@ -239,20 +239,186 @@ proto._createStream = function(sid, jid) {
 	return this._transmissions[sid];
 };
 
-proto._ibb = function(jid, file, cb) {
+/**
+ * Initiates a file-transfer through in-band bytestreaming.
+ * 
+ * @param jid
+ *  The jid with which to initiate an in-band bytestream.
+ * @param file
+ *  The path of the file to transfer.
+ * @param sid
+ *  The id of the session through which in-band bytestreaming has
+ *  been negotiated. This is usually received during stream initiation.
+ * @cb
+ *  A user-provided callback invoked to inform the user on the status
+ *  and progress of the file transfer.
+ * @exception Error
+ *  Thrown if the jid, file or sid parameter is null or undefined.
+ */
+proto._ibb = function(jid, file, sid, cb) {
 	if(jid == null)
 		throw new Error('jid must not be null.');
 	if(file == null)
 		throw new Error('file must not be null.');
-	// Can have more than one bytestream instance at a time
-	// identified by unique SID.
-	console.log('****');
-	console.log('IBB Invoked.');
-	console.log('****');
-	// Open bytestream
-	// Encode data as BASE64 chunks
-	// Transfer BASE64 chunks
-	// Close bytestream
+	if(sid == null)
+		throw new Error('sid must not be null.');
+	// Make sure file exists.
+	var stats = fs.statSync(file);
+	if(stats == false)
+		throw new Error('Could not open file: ' + file + '.');
+	var chunkSize = 4096;
+	// Open IBB stream.
+	this._openStream(jid, sid, chunkSize, function(success) {
+		if(!success)
+			return cb(false, 'Could not establish in-band bytestream.');
+		// Open the file.
+		var fd = fs.openSync(file, 'r');
+		if(fd == null)
+			return cb(false, 'Could not open file.');
+		// Keep reading and sending chunks.
+		this._transmit({ 'fd': fd, 'size': chunkSize, 'to': jid,
+			'sid': sid, 'filename': file, 'filesize': stats.size }, cb);
+	});	
+};
+
+/**
+ * Attempts to open an in-band bytestream with the specified jid.
+ * 
+ * @param jid
+ *  The jid to establish an in-band bytestream with.
+ * @param sid
+ *  The session identifier for the stream as negotiated during
+ *  stream initiation.
+ * @blockSize
+ *  The maximum size of a single block of data prior to base64
+ *  encoding.
+ * @cb
+ *  A callback method invoked once the operation has completed.
+ * @exception Error
+ *  Thrown if any of the parameters is null or invalid.
+ */
+proto._openStream = function(jid, sid, blockSize, cb) {
+	if(jid == null)
+		throw new Error('jid must not be null.');
+	if(sid == null)
+		throw new Error('sid must not be null.');
+	if(blockSize == null)
+		throw new Error('blockSize must not be null.');
+	if(cb == null)
+		throw new Error('cb must not be null.');
+	var o = { open: '', attr: {
+		'xmlns': 'http://jabber.org/protocol/ibb',
+		'block-size': blockSize,
+		'sid': sid,
+		'stanza': 'iq'
+	}};
+	var that = this;
+	this._im._iq({ type: 'set', to: jid }, o, function(success, node) {
+		cb.call(that, success);
+	});
+};
+
+/**
+ * Closes an established in-band bytestream.
+ * 
+ * @param jid
+ *  The jid with which the in-band bytestream should be closed.
+ * @param sid
+ *  The session id associated with the bytestream.
+ * @exception Error
+ *  Thrown if either parameter is null or undefined.
+ */
+proto._closeStream = function(jid, sid) {
+	if(jid == null)
+		throw new Error('jid must not be null.');
+	if(sid == null)
+		throw new Error('sid must not be null.');
+	var o = { close: '', attr: {
+		'xmlns': 'http://jabber.org/protocol/ibb',
+		'sid':   sid
+	}};
+	this._im._iq({ type: 'set', to: jid }, o);
+};
+
+/**
+ * Transmits chunks of the file until it has been fully transferred
+ * after which the in-band bytestream is torn down.
+ * 
+ * @param opts.
+ *  An object containing the jid, sid, chunk-size, file descriptor
+ *  of the file being sent and other attributes.
+ * @param cb
+ *  The user-provided callback to invoke once the file transfer has
+ *  completed.
+ * @param seq
+ *  This is optional. If provided it contains the sequence-id of the
+ *  in-band data-unit being sent.
+ * @exception Error
+ *  Thrown if either parameter is null or undefined.
+ */
+proto._transmit = function(opts, cb, seq) {
+	if(opts == null)
+		throw new Error('opts must not be null.');
+	if(seq == null)
+		seq = 0;
+	if(opts.bytesRead == null)
+		opts.bytesRead = 0;
+	var buf = new Buffer(opts.size);
+	var bytesRead = fs.readSync(opts.fd, buf, 0, opts.size, null);
+	// Done.
+	if(bytesRead == 0)
+		return this._completeTransfer(opts, cb);
+	// Base64 decode chunk of data.
+	var b64 = buf.toString('base64', 0, bytesRead);
+	var o = { data: b64, attr: {
+		'xmlns': 'http://jabber.org/protocol/ibb',
+		'sid': opts.sid,
+		'seq': seq
+	}};
+	var that = this;
+	this._im._iq({
+		type: 'set',
+		to: opts.to }, o, function(success, node) {
+			if(!success) {
+				if(cb != null)
+					cb(false, opts.to + ' cancelled the file transfer.');
+			}
+			// Sequence is defined as being 16-bit unsigned.
+			var next_seq = seq + 1;
+			if(next_seq > 65535)
+				next_seq = 0;
+			opts.bytesRead += bytesRead;
+			// Inform the user.
+			if(cb != null) {
+				cb(true, {
+					transferred: opts.bytesRead,
+					size: opts.filesize,
+					name: opts.filename
+				});
+			}
+			that._transmit(opts, cb, next_seq);
+		}
+	);
+};
+
+/**
+ * Closes the in-band bytestream and completes the file transfer.
+ * 
+ * @param opts.
+ *  An object containing the jid, sid, chunk-size and file descriptor
+ *  of the file being sent.
+ * @param cb
+ *  A user-provided callback.
+ * @exception Error
+ *  Thrown if the opts parameter is null or invalid.
+ */
+proto._completeTransfer = function(opts, cb) {
+	if(opts == null)
+		throw new Error('opts must not be null.');
+	// Close the file.
+	fs.closeSync(opts.fd);
+	// Tear down the in-band bytestream.
+	this._closeStream(opts.to, opts.sid);
 };
 
 /**
