@@ -1,12 +1,24 @@
 {
-    "name": "nw-demo",
-    "author": "HAW SE Teamnahme",
-    "description": "XMPP chat client",
-    "main": "index.html",
-    "window": {
-        "toolbar": true
-    },
-    "dependencies" : {
-        "request"   :  "2.27.0"
-    }
+  "name": "XmppClient",
+  "version": "0.1.0",
+  "description": "XmppClient",
+  "main": "test.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified! Configure in package.json\" && exit 1"
+  },
+  "repository": "",
+  "keywords": [
+    "Node.js",
+    "Eclipse",
+    "Nodeclipse"
+  ],
+  "dependencies": {
+    "extend": "1.2.1",
+    "sax": "0.5.5",
+    "json2xml": "0.1.1",
+    "starttls": "0.2.1"
+  },
+  "author": "",
+  "license": "BSD",
+  "readmeFilename": "README.md"
 }

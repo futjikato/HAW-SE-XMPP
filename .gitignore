@@ -6,6 +6,9 @@
 .LSOverride
 Icon
 
+# Eclipse
+.project
+.settings/
 
 # Thumbnails
 ._*

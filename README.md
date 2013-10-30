@@ -1,35 +1,51 @@
-HAW-SE-XMPP
-===========
+### Introduction
 
-Building the app
-------------
+This repository contains an easy-to-use and well-documented node.js module for
+communicating and exchanging messages with an XMPP server.
 
-1. [Download node-webkit binaries](https://github.com/rogerwang/node-webkit#downloads)
-1. [Install nodejs](http://nodejs.org/download/)
-1. Install bower ( ``` npm install -g bower ``` )
-1. Run ``` bower install ```
-1. Run ``` npm install ```
-1. Run ``` ./build.sh ```
+### Usage
 
-Now the app.nw file is generated and must be copied into the node-webkit application.<br>
-How this is done depends on your OS.<br>
-After the initial installation you only need to run the build.sh script again to generate an updated app.nw file.
+The module depends on the following list of modules all of which can be
+installed with **npm**:
 
-OSX
----
+ * sax-js	(npm install sax)
+ * json2xml	(npm install json2xml)
+ * extend	(npm install extend)
+ * starttls	(npm install starttls)
+ 
+The module exports a single class which can be referenced by simply
+requiring *XmppIm*.
+ 
+### API
 
-In the downloaded node-webkit binaries is and node-webkit.app. Right click an open the package. A new finder window will open up with the content of the .app file.<br>
-Copy the generated app.nw into the `Contents/Resource`  directory within the node-webkit.app Package.<br>
-Now start the node-webkit.app normally.
+The API description can be found [here](API.md).
 
-Windows
--------
+### Example
 
-Building the app.nw with 7-zip: ``` 7z.exe a -tzip app.nw * -r ```<br>
-Start nw.exe via cmd ``` nw.exe <path to app.nw> ``` or drag ``` app.nw ``` to ``` nw.exe ``` to open it.
+    var XmppIM = require('./XmppIM');
+    
+    var client = new XmppIM({
+      host:     'twattle.net',
+      user:     'myUsername',
+      password: 'myPassword'
+    });
+    
+    client.on('ready', function(info) {
+      console.log('Connected as ' + info.jid);
 
-Linux
------
-
-TODO
-Build on Linux and write documentation
+      console.log('My contact-list:');
+      console.log(info.roster);
+    });
+    
+    client.on('status', function(who, status) {
+      console.log(who + '\'s status has changed:');
+      console.log(status);
+    });
+    
+    client.on('message', function(message) {
+      console.log('New message from ' + message.from);
+      console.log(message);
+    });
+    
+For a more elaborate example, take a look at the [xmppcl](xmppcl.js) program
+which implements a simple XMPP command-line client.
