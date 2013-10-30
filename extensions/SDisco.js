@@ -27,10 +27,13 @@ function SDisco(im) {
 var proto = SDisco.prototype;
 
 // Add the following list of methods to the XmppIM class.
-proto.exports = ['_discoverServices', '_supports'];
+// proto.exports = [];
 
 //The XML namespace of the extension we're implementing.
 proto.xmlns = 'http://jabber.org/protocol/disco';
+
+// The name of the extension.
+proto.name = 'SDisco';
 
 /**
  * Callback method invoked whenever an IQ request stanza has been
@@ -71,31 +74,6 @@ proto.onIQ = function(stanza) {
 };
 
 /**
- * Determines whether the specified IQ-stanza contains a service
- * discovery request.
- * 
- * @param stanza
- *  The stanza to examine.
- * @returns
- *  true if the stanza contains a service discovery request,
- *  otherwise false.
- * @exception Error
- *  Thrown if the stanza parameter is null or undefined.
- */
-proto._isDisco = function(stanza) {
-	if(stanza == null)
-		throw new Error('stanza must not be null.');
-	if(stanza.query == null)
-		return false;
-	if(stanza.query.attributes == null)
-		return false;
-	var x = stanza.query.attributes.xmlns;
-	if(x == null)
-		return false;
-	return x.indexOf('http://jabber.org/protocol/disco#info') == 0;
-};
-
-/**
  * Discovers the services supported by the client using the specified JID.
  * 
  * @param jid
@@ -107,7 +85,7 @@ proto._isDisco = function(stanza) {
  * @exception Error
  *  Thrown if either parameter is null or undefined.
  */
-proto._discoverServices = function(jid, cb) {
+proto.discoverServices = function(jid, cb) {
 	if(jid == null)
 		throw new Error('jid must not be null.');
 	if(cb == null)
@@ -152,7 +130,7 @@ proto._discoverServices = function(jid, cb) {
  *  Thrown if either parameter is null or undefined.
  *  
  */
-proto._supports = function(jid, xmlns, cb) {
+proto.supports = function(jid, xmlns, cb) {
 	if(jid == null)
 		throw new Error('jid must not be null.');
 	if(xmlns == null)
@@ -161,7 +139,7 @@ proto._supports = function(jid, xmlns, cb) {
 		throw new Error('cb must not be null.');
 	var that = this;
 	if(this._cache[jid] == null) {
-		this._discoverServices(jid, function(success, ret) {
+		this.discoverServices(jid, function(success, ret) {
 			if(!success)
 				return cb(false);
 			that._cache[jid] = ret.features;
@@ -184,6 +162,31 @@ proto._supports = function(jid, xmlns, cb) {
 		}		
 		cb(contains(this._cache[jid], xmlns));
 	}
+};
+
+/**
+ * Determines whether the specified IQ-stanza contains a service
+ * discovery request.
+ * 
+ * @param stanza
+ *  The stanza to examine.
+ * @returns
+ *  true if the stanza contains a service discovery request,
+ *  otherwise false.
+ * @exception Error
+ *  Thrown if the stanza parameter is null or undefined.
+ */
+proto._isDisco = function(stanza) {
+	if(stanza == null)
+		throw new Error('stanza must not be null.');
+	if(stanza.query == null)
+		return false;
+	if(stanza.query.attributes == null)
+		return false;
+	var x = stanza.query.attributes.xmlns;
+	if(x == null)
+		return false;
+	return x.indexOf('http://jabber.org/protocol/disco#info') == 0;
 };
 
 /**

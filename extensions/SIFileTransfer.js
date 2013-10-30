@@ -33,6 +33,9 @@ proto.exports = ['sendFile'];
 // The XML namespace of the extension we're implementing.
 proto.xmlns = 'http://jabber.org/protocol/si/profile/file-transfer';
 
+// The name of the extension.
+proto.name = 'SIFileTransfer';
+
 /**
  * Callback method invoked whenever an IQ request stanza has been
  * received.
@@ -63,7 +66,13 @@ proto.onIQ = function(stanza) {
 				name: request.file.name,
 				size: request.file.size,
 				accept: function(savePath) {
-					that._acceptRequest(stanza, method);					
+					// Let IBB know of incoming request.
+					that._im._extension('Ibb').allow({
+						'jid':  stanza.attributes.from,
+						'path': savePath,
+						'size': request.file.size
+					});
+					that._acceptRequest(stanza, method);
 				},
 				deny: function() {
 					// reject the request.
@@ -109,8 +118,11 @@ proto.sendFile = function(jid, file, cb) {
 	if(stats == false)
 		return cb(false, 'File not found');
 	// Probe for Stream Initiation support.
+	var sdisco = this._im._extension('SDisco');
+	if(sdisco == null)
+		throw new Error('Could not find SDisco extension.');
 	var that = this;
-	this._im._supports(jid,
+	sdisco.supports(jid,
 		['http://jabber.org/protocol/si',
 		 'http://jabber.org/protocol/si/profile/file-transfer'],
 		 function(supported) {

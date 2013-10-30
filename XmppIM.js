@@ -651,6 +651,26 @@ proto._initExtensions = function(path) {
 };
 
 /**
+ * Returns the extension with the specified name.
+ * 
+ * @param name
+ *  The name of the extension to return.
+ * @exception Error
+ *  Thrown if the name parameter is null or undefined.
+ * @returns
+ *  The extension instance associated with the specified name or null
+ *  if no such extension exists.
+ */
+proto._extension = function(name) {
+	for(var i = 0; i < this._extensions.length; i++) {
+		var ext = this._extensions[i];
+		if(ext.name == name)
+			return ext;
+	}
+	return null;
+};
+
+/**
  * Invokes the callback method for the specified type for each
  * registered extension.
  * 

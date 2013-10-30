@@ -33,6 +33,9 @@ proto.exports = ['getVersion'];
 //The XML namespace of the extension we're implementing.
 proto.xmlns = 'jabber:iq:version';
 
+// The name of the extension.
+proto.name = 'Version';
+
 /**
  * Callback method invoked whenever an IQ request stanza has been
  * received.
