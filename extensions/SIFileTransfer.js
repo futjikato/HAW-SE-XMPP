@@ -79,8 +79,8 @@ proto.onIQ = function(stanza) {
 					that._rejectRequest(stanza, "User declined.");
 				}
 			};
-			// Trigger public 'file' event.
-			this._im.emit('file', stanza.attributes.from, opt);
+			// Trigger public event.
+			this._im.emit('file.transfer.request', stanza.attributes.from, opt);
 		}
 	} catch(e) {
 	}
