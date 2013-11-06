@@ -18,6 +18,9 @@
     "json2xml": "0.1.1",
     "starttls": "0.2.1"
   },
+  "devDependencies": {
+    "jasmine-node": "1.11.0"
+  },
   "author": "",
   "license": "BSD",
   "readmeFilename": "README.md"
