@@ -48,4 +48,21 @@ describe("The XmlParser", function () {
         // resume stream to push all data to the parser.
         stream.resume();
     });
+
+    it("should rename the event for an error tag to _error", function(done) {
+        // create stream and pause to prevent parser to eat all the xml before callbacks are assigned
+        var stream = fs.createReadStream('spec/mocks/xml/xmpperror.xml');
+        stream.pause();
+
+        // create xml parser
+        var parser = new XmlParser(stream);
+
+        // on error call done as success of the test
+        parser.on('_error', function() {
+            done();
+        });
+
+        // resume stream to push all data to the parser.
+        stream.resume();
+    });
 });
