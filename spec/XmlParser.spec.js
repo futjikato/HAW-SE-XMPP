@@ -10,7 +10,8 @@
 
 // get fs module to load mock files
 var fs = require("fs"),
-    XmlParser = require('../XmlParser');
+    XmlParser = require('../XmlParser'),
+    assert = require("assert");
 
 describe("The XmlParser", function () {
 
@@ -23,7 +24,7 @@ describe("The XmlParser", function () {
 
     it("should parse the simple.sml", function(done){
         // create stream and pause to prevent parser to eat all the xml before callbacks are assigned
-        var stream = fs.createReadStream('mocks/xml/simple.xml');
+        var stream = fs.createReadStream('spec/mocks/xml/simple.xml');
         stream.pause();
 
         // create xml parser
@@ -39,14 +40,12 @@ describe("The XmlParser", function () {
 
         // after root tag is processed there should be 4 child tags
         parser.on('root', function() {
-            expect(counter).toEqual(4);
+            assert.equal(4, counter);
             // and we are done testing.
             done();
         });
 
         // resume stream to push all data to the parser.
         stream.resume();
-
-        console.log("test starts");
     });
 });

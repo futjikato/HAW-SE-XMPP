@@ -19,7 +19,7 @@
     "starttls": "0.2.1"
   },
   "devDependencies": {
-    "jasmine-node": "1.11.0"
+    "mocha": "1.14.0 "
   },
   "author": "",
   "license": "BSD",
