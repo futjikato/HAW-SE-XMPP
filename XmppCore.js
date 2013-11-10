@@ -10,7 +10,39 @@
 var net = require('net');
 var events = require('events');
 var sasl = require('./sasl/sasl');
+
+// Config auslesen
 var XmlParser = require('./XmlParser');
+var fs = require("fs");
+
+var stream = fs.createReadStream('config.xml');
+stream.pause();
+
+var parser = new XmlParser(stream);
+
+var logLevel = parser.find('log-level').text();
+
+var logger = new (winston.logger)({
+    transports: [
+        new (winston.transports.Console)({
+            level: 'debug',
+            colorize: true,
+            timestamp: true
+        }),
+        new (winston.transports.File)({
+            filename: './logs/Core.log',
+            handleExceptions : true,
+            json : true,
+            timestamp: true,
+            maxsize: 1500,
+            maxFiles: 10,
+            level: logLevel.toString(),
+            colorize: true
+        })
+    ]
+});
+
+stream.resume();
 
 /**
  * A set of default options which is merged with the options passed
@@ -696,8 +728,9 @@ proto._error = function(reason) {
  * Prints the specified data to standard output if debugging is enabled.
  */
 proto._debugPrint = function(s) {
-	if(this._debug === true)
-		console.log(s);
+    logger.debug(s);
+	//if(this._debug === true) // not needed anymore!
+	//	console.log(s);
 };
 
 module.exports = XmppCore;
