@@ -10,39 +10,11 @@
 var net = require('net');
 var events = require('events');
 var sasl = require('./sasl/sasl');
+var winston = require('winston');
 
 // Config auslesen
 var XmlParser = require('./XmlParser');
 var fs = require("fs");
-
-var stream = fs.createReadStream('config.xml');
-stream.pause();
-
-var parser = new XmlParser(stream);
-
-var logLevel = parser.find('log-level').text();
-
-var logger = new (winston.logger)({
-    transports: [
-        new (winston.transports.Console)({
-            level: 'debug',
-            colorize: true,
-            timestamp: true
-        }),
-        new (winston.transports.File)({
-            filename: './logs/Core.log',
-            handleExceptions : true,
-            json : true,
-            timestamp: true,
-            maxsize: 1500,
-            maxFiles: 10,
-            level: logLevel.toString(),
-            colorize: true
-        })
-    ]
-});
-
-stream.resume();
 
 /**
  * A set of default options which is merged with the options passed
@@ -215,6 +187,40 @@ proto.presence = function(attr, o) {
  **** Private methods ****
  */
 
+proto._initLogger = function(done){
+    var stream = fs.createReadStream('config.xml');
+    stream.pause();
+
+    var parser = new XmlParser(stream)
+
+    parser.on('log-level', function(parent) {
+         var _logLevel = 'debug';
+
+        var logger = new (winston.Logger)({
+            transports: [
+                new (winston.transports.Console)({
+                    level: 'debug',
+                    colorize: true,
+                    timestamp: true
+                }),
+                new (winston.transports.File)({
+                    filename: './logs/Core.log',
+                    handleExceptions : true,
+                    json : true,
+                    timestamp: true,
+                    maxsize: 1500,
+                    maxFiles: 10,
+                    level: 'debug',
+                    colorize: true
+                })
+            ]
+        });
+        logger.info('- Logger initialized -');
+        done();
+    });
+    stream.resume();
+};
+
 /**
  * Sets up a new instance as part of object construction.
  *
@@ -226,32 +232,34 @@ proto.presence = function(attr, o) {
  *  Nothing.
  */
 proto._init = function() {
-	this._debugPrint('Connecting to ' + this._opts.host + ' on port ' +
-			this._opts.port);	
-	var sock = net.connect(this._opts);
-	var that = this;
-	this._sock = sock;
-	this._xml = null;
-	sock.once('connect', function() {
-		if(that._debug === true)
-			sock.pipe(process.stdout);
-		that._xml = new XmlParser(sock);
-		// Install handlers for stream-level errors and stanzas.
-		that._xml.on_('stream:error', that, that._error)
-		         .on_('iq', that, that._onIqStanza)
-		         .on_('message', that, that._onMessageStanza)
-		         .on_('presence', that, that._onPresenceStanza);
-		
-		that._setupConnection.call(that);
-		that.once('_ready', function() {
-			that._debugPrint('XML stream is ready.');
-			// Emit 'ready' event which is part of the public API.
-			that.emit('ready');
-		});
-	});
-	sock.on('error', function(e) {
-		that.emit('error', e);
-	});
+    this._initLogger(function(){
+        this._debugPrint('Connecting to ' + this._opts.host + ' on port ' +
+            this._opts.port);
+        var sock = net.connect(this._opts);
+        var that = this;
+        this._sock = sock;
+        this._xml = null;
+        sock.once('connect', function() {
+            if(that._debug === true)
+                sock.pipe(process.stdout);
+            that._xml = new XmlParser(sock);
+            // Install handlers for stream-level errors and stanzas.
+            that._xml.on_('stream:error', that, that._error)
+                .on_('iq', that, that._onIqStanza)
+                .on_('message', that, that._onMessageStanza)
+                .on_('presence', that, that._onPresenceStanza);
+
+            that._setupConnection.call(that);
+            that.once('_ready', function() {
+                that._debugPrint('XML stream is ready.');
+                // Emit 'ready' event which is part of the public API.
+                that.emit('ready');
+            });
+        });
+        sock.on('error', function(e) {
+            that.emit('error', e);
+        });
+    });
 };
 
 /**
