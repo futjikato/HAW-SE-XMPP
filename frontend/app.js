@@ -4,7 +4,7 @@ var xmpp = angular.module('xmpp', [
     'xmppControllers'
 ]);
 
-xmpp.config(['$routeProvider', function ($routeProvider) {
+xmpp.config(['$routeProvider', '$locationProvider', function ($routeProvider, $locationProvider) {
     $routeProvider
     .when('/', {
         templateUrl : 'views/login.html',
@@ -13,6 +13,9 @@ xmpp.config(['$routeProvider', function ($routeProvider) {
     .when('/main', {
         templateUrl : 'views/main.html',
         controller : 'mainController'
+    })
+    .otherwise({
+        redirectTo: '/'
     });
 }]);
 
