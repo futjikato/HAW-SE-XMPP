@@ -75,9 +75,11 @@ function XmppCore(opts) {
 	 * A set of callback handlers for IQ stanzas.
 	 */
 	this._iqHandler = {};
+
+    this._logger;
 	
 	if(opts.autoConnect === true)
-		this._init();	
+		this._init();
 }
 
 /**
@@ -191,12 +193,13 @@ proto._initLogger = function(done){
     var stream = fs.createReadStream('config.xml');
     stream.pause();
 
-    var parser = new XmlParser(stream)
+    var parser = new XmlParser(stream);
 
+    var that = this;
     parser.on('log-level', function(parent) {
          var _logLevel = 'debug';
 
-        var logger = new (winston.Logger)({
+        that._logger = new (winston.Logger)({
             transports: [
                 new (winston.transports.Console)({
                     level: 'debug',
@@ -215,8 +218,9 @@ proto._initLogger = function(done){
                 })
             ]
         });
-        logger.info('- Logger initialized -');
+        that._logger.info('- Logger initialized -');
         done();
+        that._logger.info('post done');
     });
     stream.resume();
 };
@@ -232,13 +236,12 @@ proto._initLogger = function(done){
  *  Nothing.
  */
 proto._init = function() {
+    var that = this;
     this._initLogger(function(){
-        this._debugPrint('Connecting to ' + this._opts.host + ' on port ' +
-            this._opts.port);
-        var sock = net.connect(this._opts);
-        var that = this;
-        this._sock = sock;
-        this._xml = null;
+        that._logger.info('Connecting to ' + that._opts.host + ' on port ' + that._opts.port);
+        var sock = net.connect(that._opts);
+        that._sock = sock;
+        that._xml = null;
         sock.once('connect', function() {
             if(that._debug === true)
                 sock.pipe(process.stdout);
@@ -736,7 +739,7 @@ proto._error = function(reason) {
  * Prints the specified data to standard output if debugging is enabled.
  */
 proto._debugPrint = function(s) {
-    logger.debug(s);
+    this._logger.info(s);
 	//if(this._debug === true) // not needed anymore!
 	//	console.log(s);
 };
