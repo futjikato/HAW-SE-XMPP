@@ -25,7 +25,10 @@ client.on('ready', function(info) {
 	setTimeout(function() {
 		client.close();
 	}, 5000);
-*/			
+*/
+
+    require('./monitoring/monitor').send(['test', 'client'], 'connect');
+
  });
  
 client.on('status', function(contact, status) {
