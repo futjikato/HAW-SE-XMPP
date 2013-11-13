@@ -12,10 +12,7 @@ var events = require('events');
 var sasl = require('./sasl/sasl');
 var winston = require('winston');
 var config = require('./configuration/Config');
-
-// Config auslesen
 var XmlParser = require('./XmlParser');
-var fs = require("fs");
 
 /**
  * A set of default options which is merged with the options passed
