@@ -1,7 +1,6 @@
 var xmpp = angular.module('xmpp', [
     'ngRoute',
-    'ui.bootstrap',
-    'xmppControllers'
+    'ui.bootstrap'
 ]);
 
 xmpp.config(['$routeProvider', '$locationProvider', function ($routeProvider, $locationProvider) {
@@ -18,5 +17,3 @@ xmpp.config(['$routeProvider', '$locationProvider', function ($routeProvider, $l
         redirectTo: '/'
     });
 }]);
-
-angular.module('xmppControllers', []);
