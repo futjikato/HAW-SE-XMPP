@@ -7,9 +7,10 @@
         <link rel="stylesheet" href="components/bootstrap/dist/css/bootstrap-theme.min.css">
         <link rel="stylesheet" href="style.css">
 
+        <script src="components/jquery/jquery.min.js"></script>
         <script src="components/bootstrap/dist/js/bootstrap.min.js"></script>
         <script src="components/angular/angular.min.js"></script>
-        <script src="components/angular-route/angular-route.min.js"></script>
+        <script src="components/angular-ui-router/release/angular-ui-router.min.js"></script>
         <script src="components/angular-bootstrap/ui-bootstrap-tpls.min.js"></script>
         <script src="app.js"></script>
         <script src="xmpp.js"></script>
@@ -46,6 +47,6 @@
                 </ul>
             </div>
         </nav>
-        <div class="container" ng-view></div>
+        <div class="container" ui-view></div>
     </body>
 </html>

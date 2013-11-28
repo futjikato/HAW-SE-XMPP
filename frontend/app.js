@@ -1,19 +1,20 @@
 var xmpp = angular.module('xmpp', [
-    'ngRoute',
+    'ui.router',
     'ui.bootstrap'
 ]);
 
-xmpp.config(['$routeProvider', '$locationProvider', function ($routeProvider, $locationProvider) {
-    $routeProvider
-    .when('/', {
+xmpp.config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $urlRouterProvider) {
+    $urlRouterProvider.otherwise('/');
+
+    $stateProvider
+    .state('login', {
+        url:    '/',
         templateUrl : 'views/login.html',
         controller : 'loginController'
     })
-    .when('/main', {
+    .state('main', {
+        url:    '/main',
         templateUrl : 'views/main.html',
         controller : 'mainController'
-    })
-    .otherwise({
-        redirectTo: '/'
     });
 }]);
