@@ -1,52 +1,8 @@
 <div class="row">
     <div class=col-xs-4>
-        <div class="list-group">
-            <a href="#" class="list-group-item">Vince</a>
-        </div>
-
-        <tabset>
-            <tab>
-                <tab-heading>
-                    <span class="glyphicon glyphicon-user"></span> Kontakte
-                </tab-heading>
-                <div class="list-group">
-                    <a href="#" class="list-group-item">Torben</a>
-                    <a href="#" class="list-group-item">Vince</a>
-                    <a href="#" class="list-group-item active">André</a>
-                    <a href="#" class="list-group-item">Tobias</a>
-                    <a href="#" class="list-group-item">Michael</a>
-                    <a href="#" class="list-group-item">Moritz</a>
-                </div>
-            </tab>
-            <tab>
-                <tab-heading>
-                    <span class="glyphicon glyphicon-time"></span> Konversationen
-                    <span class="badge">2</span>
-                </tab-heading>
-                <div class="list-group">
-                    <a href="#" class="list-group-item">Moritz</a>
-                </div>
-            </tab>
-        </tabset>
+        <div ui-view="leftside"></div>
     </div>
     <div class=col-xs-8>
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <h3 class="panel-title">André</h3>
-            </div>
-            <div class="panel-body">
-                <div class="row">
-                    <div class="col-sm-3">
-                        <img class="img-thumbnail">
-                    </div>
-                    <div class="col-sm-9">
-                        <ul class="list-group">
-                            <li class="list-group-item"><span class="glyphicon glyphicon-ok-sign"></span> Online</li>
-                            <li class="list-group-item"><span class="glyphicon glyphicon-time"></span> 03:46</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <div ui-view="rightside"></div>
     </div>
 </div>
