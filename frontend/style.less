@@ -1,17 +1,84 @@
 .nav > li, .pagination, .carousel a { cursor: pointer; }
 
-body {
-  padding-top: 60px;
+html, body {
+	height: 100%;
 }
 
 .container {
     width: inherit;
 }
 
+.navbar {
+	border-radius: 0;
+}
+
 .nav-tabs {
     border-bottom: 0;
 }
 
+.stretchbox {
+	display: flex;
+	flex-direction: row;
+	align-content: stretch;
+	display: -webkit-flex;
+	-webkit-flex-direction: row;
+	-webkit-align-content: strech;
+
+	padding-top: 60px;
+	height: 100%;
+}
+
+.flex-1 {
+	flex: 1;
+	-webkit-flex: 1;
+}
+
+.left-side {
+	width: 30%;
+}
+
+.right-side {
+	width: 69%;
+	margin-left: 1%;
+	.flex-1;
+}
+
 .list-group-item {
     padding: 5px 10px;
+}
+
+.contact-list {
+    overflow-y: auto;
+    height: 100%;
+}
+
+.pad-leftside-controls {
+	padding-top: 40px;
+	.relative;
+
+	.nav {
+		.absolute;
+		top: 40px;
+	}
+
+	.tab-content {
+		padding-top: 40px;
+		height: 100%;
+	}
+
+	.tab-pane {
+		height: 100%;
+	}
+}
+
+.relative {
+	position: relative;
+	height: 100%;
+}
+
+.absolute {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
 }

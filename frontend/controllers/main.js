@@ -1,6 +1,9 @@
-var xmppControllers = angular.module('xmpp');
+var xmpp = angular.module('xmpp');
 
-xmppControllers.controller('mainController', ['$scope', function ($scope) {
+xmpp.controller('mainController', ['$scope', function ($scope) {
+    $scope.left = 'views/leftside.html';
+    $scope.right = 'views/rightside.html';
+
     $scope.contacts = [
         {
             id: 1,

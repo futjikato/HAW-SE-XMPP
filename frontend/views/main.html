@@ -1,8 +1,6 @@
-<div class="row">
-    <div class=col-xs-4>
-        <div ui-view="leftside"></div>
-    </div>
-    <div class=col-xs-8>
-        <div ui-view="rightside"></div>
-    </div>
+<div class="left-side">
+    <div ng-include="left" class="relative"></div>
+</div>
+<div class="right-side">
+    <div ng-include="right"></div>
 </div>

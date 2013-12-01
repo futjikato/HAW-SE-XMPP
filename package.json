@@ -12,6 +12,10 @@
     "Eclipse",
     "Nodeclipse"
   ],
+  "window": {
+      "min_width": 400,
+      "min_height": 300
+  },
   "dependencies": {
     "extend": "1.2.1",
     "sax": "0.5.5",
