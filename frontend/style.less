@@ -16,6 +16,17 @@ html, body {
     border-bottom: 0;
 }
 
+.settings-window {
+	z-index: 10000;
+	position: absolute;
+	top: 2%;
+	left: 2%;
+	width: 96%;
+	height: 96%;
+	border-radius: 0;
+	box-shadow: 0 0 3px 3px #ccc;
+}
+
 .stretchbox {
 	display: flex;
 	flex-direction: row;
@@ -35,10 +46,12 @@ html, body {
 
 .left-side {
 	width: 30%;
+	height: 100%;
 }
 
 .right-side {
 	width: 69%;
+	height: 100%;
 	margin-left: 1%;
 	.flex-1;
 }
@@ -81,4 +94,5 @@ html, body {
 	top: 0;
 	left: 0;
 	width: 100%;
+	z-index: 1000;
 }
