@@ -8,17 +8,18 @@ xmpp.config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $
 
     $stateProvider
     .state('main', {
-        url: '/',
+        abstract: true,
+        url: '',
         templateUrl : 'views/main.html',
         controller : 'mainController'
     })
     .state('main.login', {
-        url: 'login',
+        url: '/login',
         templateUrl : 'views/login.html',
         controller : 'loginController'
     })
     .state('main.index', {
-        url: 'index',
+        url: '/index',
         templateUrl : 'views/index.html',
         controller : 'indexController'
     })
