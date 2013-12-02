@@ -54,3 +54,4 @@ bower_components
 ### CUSTOM ###s
 app.nw
 frontend/components/
+frontend/style.css
