@@ -1,0 +1,49 @@
+<tabset class="flex-1">
+    <tab heading="Login">
+        <div class="panel-body">
+            <form class="form-horizontal" role="form" ng-submit="login()">
+                <div class="form-group">
+                    <label for="user" class="col-sm-2 control-label">User</label>
+                    <div class="col-sm-10">
+                        <input type="email" class="form-control" id="user" placeholder="User" ng-model="user">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="domain" class="col-sm-2 control-label">Domain</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" id="domain" placeholder="Domain" ng-model="domain">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="ressource" class="col-sm-2 control-label">Ressource</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" id="ressource" placeholder="Ressource" ng-model="ressource">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="password" class="col-sm-2 control-label">Password</label>
+                    <div class="col-sm-10">
+                        <input type="password" class="form-control" id="password" placeholder="Password" ng-model="password">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-offset-2 col-sm-10">
+                        <div class="checkbox">
+                            <label>
+                                <input type="checkbox"> Remember me
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-offset-2 col-sm-10">
+                        <input type="submit" value="Sign in" class="btn btn-default">
+                    </div>
+                </div>
+            </form>
+        </div>
+    </tab>
+    <tab heading="Create Account">
+
+    </tab>
+</tabset>

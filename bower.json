@@ -1,0 +1,12 @@
+{
+  "name": "XmppClient",
+  "private": true,
+  "dependencies": {
+    "jquery": "~2.0.3",
+    "angular": "",
+    "angular-route": "",
+    "bootstrap": "~3.0.2",
+    "angular-bootstrap": "~0.6.0",
+    "angular-ui-router": "~0.2.0"
+  }
+}

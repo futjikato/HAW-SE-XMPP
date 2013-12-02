@@ -1,0 +1,25 @@
+<div class="list-group absolute">
+    <a href="#" class="list-group-item">Vince</a>
+</div>
+
+<tabset class="pad-leftside-controls">
+    <tab>
+        <tab-heading>
+            <span class="glyphicon glyphicon-user"></span> Kontakte
+        </tab-heading>
+        <div class="contact-list">
+            <div class="list-group">
+                <a href="#" class="list-group-item" ui-sref="main.index.contact({contactId:contact.id})" ng-repeat="contact in contacts">{{contact.name}}</a>
+            </div>
+        </div>
+    </tab>
+    <tab>
+        <tab-heading>
+            <span class="glyphicon glyphicon-time"></span> Konversationen
+            <span class="badge">2</span>
+        </tab-heading>
+        <div class="list-group">
+            <a href="#" class="list-group-item">Moritz</a>
+        </div>
+    </tab>
+</tabset>
