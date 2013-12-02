@@ -197,6 +197,7 @@ proto._init = function() {
 	this._debugPrint('Connecting to ' + this._opts.host + ' on port ' +
 			this._opts.port);	
 	var sock = net.connect(this._opts);
+    sock.setTimeout(1);
 	var that = this;
 	this._sock = sock;
 	this._xml = null;
@@ -220,6 +221,9 @@ proto._init = function() {
 	sock.on('error', function(e) {
 		that.emit('error', e);
 	});
+    sock.on('timeout', function() {
+        that.emit('error', new Error("Connection timed out."));
+    });
 };
 
 /**

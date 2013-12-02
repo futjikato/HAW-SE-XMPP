@@ -22,14 +22,26 @@ function XmppAPI(opts){
     var xmppIM = new XmppIM(opts);
     var observer = opts.callback;
 
-    xmppIM.on('ready', function(info){
+    this.username;
+    this.userlist;
 
+    // that is instance of API
+    var that = this;
+
+    xmppIM.on('ready', function(info){
+        // save roster
+        that.userlist = info.roster;
+        // save username
+        that.username = info.jid.split("@")[0];
+        // inform frontend about success
+        observer(true);
     }).on('status', function(who, status){
 
     }).on('message', function(message){
 
     }).on('error', function(error){
-
+        // @todo provide method to bubble to frontend somehow ( maaaaagic )
+        console.log(error);
     }).on('authorize', function(request){
 
     }).on('authorized', function(jid){
@@ -74,3 +86,10 @@ var proto = XmppAPI.prototype;
 proto.sendMessage = function(to, msg){
     XmppIM.sendMessage(to, msg);
 };
+
+proto.getUsername = function() {
+    return this.username;
+};
+
+// expose API
+module.exports = XmppAPI;
