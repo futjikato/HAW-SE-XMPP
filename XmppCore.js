@@ -11,10 +11,8 @@ var net = require('net');
 var events = require('events');
 var sasl = require('./sasl/sasl');
 var winston = require('winston');
-
-// Config auslesen
+var config = require('./configuration/Config');
 var XmlParser = require('./XmlParser');
-var fs = require("fs");
 
 /**
  * A set of default options which is merged with the options passed
@@ -189,40 +187,28 @@ proto.presence = function(attr, o) {
  **** Private methods ****
  */
 
-proto._initLogger = function(done){
-    var stream = fs.createReadStream('config.xml');
-    stream.pause();
-
-    var parser = new XmlParser(stream);
-
-    var that = this;
-    parser.on('log-level', function(parent) {
-         var _logLevel = 'debug';
-
-        that._logger = new (winston.Logger)({
-            transports: [
-                new (winston.transports.Console)({
-                    level: 'debug',
-                    colorize: true,
-                    timestamp: true
-                }),
-                new (winston.transports.File)({
-                    filename: './logs/Core.log',
-                    handleExceptions : true,
-                    json : true,
-                    timestamp: true,
-                    maxsize: 1500,
-                    maxFiles: 10,
-                    level: 'debug',
-                    colorize: true
-                })
-            ]
-        });
-        that._logger.info('- Logger initialized -');
-        done();
-        that._logger.info('post done');
+proto._initLogger = function(){
+    var logLevel = config.get('log-level');
+    this._logger = new (winston.Logger)({
+        transports: [
+            new (winston.transports.Console)({
+                level: logLevel,
+                colorize: true,
+                timestamp: true
+            }),
+            new (winston.transports.File)({
+                filename: './logs/Core.log',
+                handleExceptions : true,
+                json : true,
+                timestamp: true,
+                maxsize: 1500,
+                maxFiles: 10,
+                level: logLevel,
+                colorize: true
+            })
+        ]
     });
-    stream.resume();
+    this._logger.info('- Logger initialized ( log-level: ' + logLevel + ' ) -');
 };
 
 /**
@@ -236,32 +222,36 @@ proto._initLogger = function(done){
  *  Nothing.
  */
 proto._init = function() {
+    // save scope of XmppCore
     var that = this;
-    this._initLogger(function(){
-        that._logger.info('Connecting to ' + that._opts.host + ' on port ' + that._opts.port);
-        var sock = net.connect(that._opts);
-        that._sock = sock;
-        that._xml = null;
-        sock.once('connect', function() {
-            if(that._debug === true)
-                sock.pipe(process.stdout);
-            that._xml = new XmlParser(sock);
-            // Install handlers for stream-level errors and stanzas.
-            that._xml.on_('stream:error', that, that._error)
-                .on_('iq', that, that._onIqStanza)
-                .on_('message', that, that._onMessageStanza)
-                .on_('presence', that, that._onPresenceStanza);
 
-            that._setupConnection.call(that);
-            that.once('_ready', function() {
-                that._debugPrint('XML stream is ready.');
-                // Emit 'ready' event which is part of the public API.
-                that.emit('ready');
-            });
+    // initialize logger
+    that._initLogger();
+
+    // connect to server
+    that._logger.info('Connecting to ' + that._opts.host + ' on port ' + that._opts.port);
+    var sock = net.connect(that._opts);
+    that._sock = sock;
+    that._xml = null;
+    sock.once('connect', function() {
+        if(that._debug === true)
+            sock.pipe(process.stdout);
+        that._xml = new XmlParser(sock);
+        // Install handlers for stream-level errors and stanzas.
+        that._xml.on_('stream:error', that, that._error)
+            .on_('iq', that, that._onIqStanza)
+            .on_('message', that, that._onMessageStanza)
+            .on_('presence', that, that._onPresenceStanza);
+
+        that._setupConnection.call(that);
+        that.once('_ready', function() {
+            that._debugPrint('XML stream is ready.');
+            // Emit 'ready' event which is part of the public API.
+            that.emit('ready');
         });
-        sock.on('error', function(e) {
-            that.emit('error', e);
-        });
+    });
+    sock.on('error', function(e) {
+        that.emit('error', e);
     });
 };
 
