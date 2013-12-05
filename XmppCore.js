@@ -10,8 +10,7 @@
 var net = require('net');
 var events = require('events');
 var sasl = require('./sasl/sasl');
-var winston = require('winston');
-var config = require('./configuration/Config');
+var logger = require('./Logger');
 var XmlParser = require('./XmlParser');
 
 /**
@@ -73,8 +72,6 @@ function XmppCore(opts) {
 	 * A set of callback handlers for IQ stanzas.
 	 */
 	this._iqHandler = {};
-
-    this._logger;
 	
 	if(opts.autoConnect === true)
 		this._init();
@@ -187,30 +184,6 @@ proto.presence = function(attr, o) {
  **** Private methods ****
  */
 
-proto._initLogger = function(){
-    var logLevel = config.get('log-level');
-    this._logger = new (winston.Logger)({
-        transports: [
-            new (winston.transports.Console)({
-                level: logLevel,
-                colorize: true,
-                timestamp: true
-            }),
-            new (winston.transports.File)({
-                filename: './logs/Core.log',
-                handleExceptions : true,
-                json : true,
-                timestamp: true,
-                maxsize: 1500,
-                maxFiles: 10,
-                level: logLevel,
-                colorize: true
-            })
-        ]
-    });
-    this._logger.info('- Logger initialized ( log-level: ' + logLevel + ' ) -');
-};
-
 /**
  * Sets up a new instance as part of object construction.
  *
@@ -225,11 +198,8 @@ proto._init = function() {
     // save scope of XmppCore
     var that = this;
 
-    // initialize logger
-    that._initLogger();
-
     // connect to server
-    that._logger.info('Connecting to ' + that._opts.host + ' on port ' + that._opts.port);
+    logger.info('Connecting to ' + that._opts.host + ' on port ' + that._opts.port);
     var sock = net.connect(that._opts);
     that._sock = sock;
     that._xml = null;
@@ -729,9 +699,7 @@ proto._error = function(reason) {
  * Prints the specified data to standard output if debugging is enabled.
  */
 proto._debugPrint = function(s) {
-    this._logger.info(s);
-	//if(this._debug === true) // not needed anymore!
-	//	console.log(s);
+    logger.info(s);
 };
 
 module.exports = XmppCore;
