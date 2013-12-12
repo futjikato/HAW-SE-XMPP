@@ -1,5 +1,5 @@
 <div class="list-group absolute">
-    <a href="#" class="list-group-item">Vince</a>
+    <a class="list-group-item" ui-sref="main.index.contact(1)">Vince</a>
 </div>
 
 <tabset class="pad-leftside-controls">
@@ -9,7 +9,7 @@
         </tab-heading>
         <div class="contact-list">
             <div class="list-group">
-                <a href="#" class="list-group-item" ui-sref="main.index.contact({contactId:contact.id})" ng-repeat="contact in contacts">{{contact.name}}</a>
+                <a class="list-group-item" ui-sref="main.index.contact({contactId:contact.id})" ng-repeat="contact in contacts"><span ng-show="contact.unread" class="badge">{{contact.unread}}</span>{{contact.name}}</a>
             </div>
         </div>
     </tab>
@@ -18,8 +18,10 @@
             <span class="glyphicon glyphicon-time"></span> Konversationen
             <span class="badge">2</span>
         </tab-heading>
-        <div class="list-group">
-            <a href="#" class="list-group-item">Moritz</a>
+        <div class="contact-list">
+            <div class="list-group">
+                <a class="list-group-item" ui-sref="main.index.contact(1)">Moritz</a>
+            </div>
         </div>
     </tab>
 </tabset>

@@ -7,27 +7,33 @@ xmpp.controller('indexController', ['$scope', function ($scope) {
     $scope.contacts = [
         {
             id: 1,
-            name: 'Torben'
+            name: 'Torben',
+            unread: 1
         },
         {
             id: 2,
-            name: 'Vince'
+            name: 'Vince',
+            unread: 5
         },
         {
             id: 3,
-            name: 'André'
+            name: 'André',
+            unread: 0
         },
         {
             id: 4,
-            name: 'Tobias'
+            name: 'Tobias',
+            unread: 0
         },
         {
             id: 5,
-            name: 'Michael'
+            name: 'Michael',
+            unread: 0
         },
         {
             id: 6,
-            name: 'Moritz'
+            name: 'Moritz',
+            unread: 0
         }
     ];
 }]);

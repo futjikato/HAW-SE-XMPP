@@ -13,8 +13,10 @@
     "Nodeclipse"
   ],
   "window": {
-      "min_width": 400,
-      "min_height": 300
+      "width": 980,
+      "height": 485,
+      "min_width": 980,
+      "min_height": 485
   },
   "dependencies": {
     "extend": "1.2.1",
