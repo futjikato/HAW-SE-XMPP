@@ -18,7 +18,7 @@ var XmppIM = require('./XmppIM');
  *               if not specified.
  */
 
-function XmppAPI(opts){
+function XmppAPIwE(opts){
     var xmppIM = new XmppIM(opts);
     var observer = opts.callback;
 
@@ -37,21 +37,21 @@ function XmppAPI(opts){
         observer(true);
     }).on('status', function(who, status){
 
-    }).on('message', function(message){
+        }).on('message', function(message){
 
-    }).on('error', function(error){
-        // @todo provide method to bubble to frontend somehow ( maaaaagic )
-        console.log(error);
-    }).on('authorize', function(request){
+        }).on('error', function(error){
+            // @todo provide method to bubble to frontend somehow ( maaaaagic )
+            console.log(error);
+        }).on('authorize', function(request){
 
-    }).on('authorized', function(jid){
+        }).on('authorized', function(jid){
 
-    }).on('refused', function(jid){
+        }).on('refused', function(jid){
 
-    });
+        });
 }
 
-var proto = XmppAPI.prototype;
+var proto = XmppAPIwE.prototype;
 
 
 /**
@@ -92,4 +92,4 @@ proto.getUsername = function() {
 };
 
 // expose API
-module.exports = XmppAPI;
+module.exports = XmppAPIwE;

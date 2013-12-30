@@ -10,6 +10,15 @@ var XmppIM = require('./XmppIM');
  * @param opts
  *  A set of options, some of which are required (all options except the 'callback' are for the XmppCore):
  *   'callback'  the observer to notify.
+ *      this callback object needs certain functions to handle incoming events which are:
+ *          'handleLoginDone'                       Login was successful
+ *          'handleMessage'         (who, message)  handle an incoming message
+ *          'handleStatusChange'    (who, status)   handle a contacts status change
+ *          'handleError'           (error)         handle occuring errors
+ *          'handleContactRequest'  (who, request)  handle contact request from someone else
+ *          'handleContactDeny'     (who)           some of your contactrequests was denied
+ *          'handleContactConfirm'  (who)           some of your contactrequests was accepted
+ *
  *   'host'      specifies the hostname of the XMPP server.
  *   'user'      the local part of the jid to connect with.
  *   'password'  the password for the respective jid.
@@ -18,7 +27,7 @@ var XmppIM = require('./XmppIM');
  *               if not specified.
  */
 
-function XmppAPI(opts){
+function XmppAPIwC(opts){
     var xmppIM = new XmppIM(opts);
     var observer = opts.callback;
 
@@ -33,25 +42,34 @@ function XmppAPI(opts){
         that.userlist = info.roster;
         // save username
         that.username = info.jid.split("@")[0];
+        //save servername
+        that.servername = info.jid.split("@")[1];
         // inform frontend about success
-        observer(true);
+        observer.handleLoginDone();
     }).on('status', function(who, status){
+        var user = who.split("@")[0];
 
+        observer.handleStatusChange(user, status);
     }).on('message', function(message){
+        var user = message.from.split("@")[0];
 
+        observer.handleMessage(user, message);
     }).on('error', function(error){
         // @todo provide method to bubble to frontend somehow ( maaaaagic )
         console.log(error);
+        observer.handleError(error);
     }).on('authorize', function(request){
-
+        var user = request.from.split("@")[0];
+        observer.handleContactRequest(user, request);
+        //call accept on the request object to accept and deny to decline the request
     }).on('authorized', function(jid){
-
+        observer.handleContactDeny(jid.split("@")[0]);
     }).on('refused', function(jid){
-
+        observer.handleContactConfirm(jid.split("@")[0]);
     });
 }
 
-var proto = XmppAPI.prototype;
+var proto = XmppAPIwC.prototype;
 
 
 /**
@@ -91,5 +109,13 @@ proto.getUsername = function() {
     return this.username;
 };
 
+proto.getUserlist = function() {
+    return this.userlist;
+}
+
+proto.setStatus = function(o) {
+    XmppIM.setStatus(o);
+}
+
 // expose API
-module.exports = XmppAPI;
+module.exports = XmppAPIwC;
