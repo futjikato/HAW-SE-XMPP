@@ -24,8 +24,25 @@ xmpp.config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $
         controller : 'indexController'
     })
     .state('main.index.contact', {
-        url: '/contact/:contactId',
+        url: '/contact/:contactJid',
         templateUrl: 'views/contact.html',
         controller: 'contactController'
     });
 }]);
+
+xmpp.filter('reverse', function() {
+    return function(items) {
+        return items.slice().reverse();
+    };
+});
+
+xmpp.factory('utils', function () {
+    return {
+        findById: function (a, id) {
+            for (var i = 0; i < a.length; i++) {
+                if (a[i].jid == id) return a[i];
+            }
+            return null;
+        }
+    }
+});

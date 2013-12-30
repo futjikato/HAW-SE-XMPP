@@ -2,6 +2,10 @@
     <a class="list-group-item" ui-sref="main.index.contact(1)">Vince</a>
 </div>
 
+<div class="list-group absolute contact-add">
+    <a class="list-group-item" href="" ng-click=""><span class="glyphicon glyphicon-plus-sign"></span> Kontakt hinzufügen</a>
+</div>
+
 <tabset class="pad-leftside-controls">
     <tab>
         <tab-heading>
@@ -9,7 +13,14 @@
         </tab-heading>
         <div class="contact-list">
             <div class="list-group">
-                <a class="list-group-item" ui-sref="main.index.contact({contactId:contact.id})" ng-repeat="contact in contacts"><span ng-show="contact.unread" class="badge">{{contact.unread}}</span>{{contact.name}}</a>
+                <a class="list-group-item" ui-sref="main.index.contact({contactJid:contact.jid})" ng-repeat="contact in contacts | orderBy:['online', 'unread']:reverse">
+                    <span ng-show="contact.unread" class="badge">{{contact.unread}}</span>
+                    <span ng-switch on="contact.online">
+                        <span ng-switch-when="true" class="glyphicon glyphicon-ok-sign"></span>
+                        <span ng-switch-default class="glyphicon glyphicon-question-sign"></span>
+                    </span>
+                    {{contact.jid}}
+                </a>
             </div>
         </div>
     </tab>
