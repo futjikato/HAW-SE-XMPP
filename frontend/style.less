@@ -1,5 +1,14 @@
 .nav > li, .pagination, .carousel a { cursor: pointer; }
 
+.absolute {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	margin: 0;
+	//	z-index: 1000;
+}
+
 html, body {
 	height: 100%;
 }
@@ -68,20 +77,20 @@ html, body {
 }
 
 .contact-add {
-	margin-top: 40px;
+	top: 40px;
 }
 
 .pad-leftside-controls {
-	padding-top: 80px;
+	top: 80px;
 	.relative;
 
 	.nav {
 		.absolute;
-		top: 80px;
 	}
 
 	.tab-content {
-		margin-top: 40px;
+		.absolute;
+		top: 40px;
 		height: 100%;
 	}
 
@@ -90,17 +99,19 @@ html, body {
 	}
 }
 
+.status-button {
+	cursor: default;
+	display: inline-block;
+	-webkit-user-select: none;
+
+	&:hover {
+		background: #F5F5F5;
+	}
+}
+
 .relative {
 	position: relative;
 	height: 100%;
-}
-
-.absolute {
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	z-index: 1000;
 }
 
 .w100 {

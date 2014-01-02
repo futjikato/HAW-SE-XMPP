@@ -4,7 +4,9 @@ xmpp.controller('indexController', ['$scope', 'utils', 'xmpp', function ($scope,
     $scope.left = 'views/leftside.html';
     $scope.right = 'views/rightside.html';
 
-    $scope.contacts = xmpp.getContacts();
+//    $scope.myName = xmpp.getUsername();
+    $scope.myName = 'Vince';
+    $scope.contacts = xmpp.getUserlist();
 
     // show badge in contact list on new message
     xmpp.on('message', function(message) {
@@ -12,13 +14,18 @@ xmpp.controller('indexController', ['$scope', 'utils', 'xmpp', function ($scope,
         $scope.$apply();
     });
 
-//    xmpp.on('contact_online', function(contact) {
-//
-//    });
-//
-//    xmpp.on('contact_offline', function(contact) {
-//
-//    });
+    $scope.addContact = function(newContactJid) {
+        xmpp.addContact(newContactJid);
+        console.log(newContactJid);
+    };
+
+    $scope.setOnline = function() {
+        xmpp.setStatus({show:'chat'});
+    };
+
+    $scope.setDnd = function() {
+        xmpp.setStatus({show:'dnd'});
+    };
 
     $scope.contacts = [
         {

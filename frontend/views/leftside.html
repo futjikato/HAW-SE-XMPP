@@ -1,9 +1,37 @@
 <div class="list-group absolute">
-    <a class="list-group-item" ui-sref="main.index.contact(1)">Vince</a>
+    <span class="dropdown list-group-item">
+        <div data-toggle="dropdown" class="status-button">
+            <span class="glyphicon glyphicon-ok-sign dropdown-toggle"></span>
+            <span class="caret"></span>
+        </div>
+        <ul class="dropdown-menu" role="menu">
+            <li role="presentation"><a role="menuitem" href="" ng-click="setOnline()">Online</a></li>
+            <li role="presentation"><a role="menuitem" href="" ng-click="setDnd()">DnD</a></li>
+        </ul>
+        {{myName}}
+    </span>
 </div>
 
-<div class="list-group absolute contact-add">
-    <a class="list-group-item" href="" ng-click=""><span class="glyphicon glyphicon-plus-sign"></span> Kontakt hinzufügen</a>
+<div class="list-group contact-add absolute">
+    <a class="list-group-item" data-toggle="modal" data-target="#contactAddModal" href=""><span class="glyphicon glyphicon-plus-sign"></span> Kontakt hinzufügen</a>
+</div>
+
+<div class="modal fade" id="contactAddModal" role="dialog" aria-labelledby="contactAddLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title" id="contactAddLabel">Kontakt hinzufügen</h4>
+            </div>
+            <div class="modal-body">
+                <input type="text" class="form-control" placeholder="Jabber Identifier" ng-model="newContactJid">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Schließen</button>
+                <button type="button" class="btn btn-primary" ng-click="addContact(newContactJid)" data-dismiss="modal">Hinzufügen</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <tabset class="pad-leftside-controls">
@@ -13,13 +41,13 @@
         </tab-heading>
         <div class="contact-list">
             <div class="list-group">
-                <a class="list-group-item" ui-sref="main.index.contact({contactJid:contact.jid})" ng-repeat="contact in contacts | orderBy:['online', 'unread']:reverse">
+                <a class="list-group-item" ui-sref="main.index.contact({contactJid:contact.jid})" ng-repeat="contact in contacts | orderBy:['-online', 'jid']">
                     <span ng-show="contact.unread" class="badge">{{contact.unread}}</span>
                     <span ng-switch on="contact.online">
                         <span ng-switch-when="true" class="glyphicon glyphicon-ok-sign"></span>
                         <span ng-switch-default class="glyphicon glyphicon-question-sign"></span>
                     </span>
-                    {{contact.jid}}
+                    {{contact.name}}
                 </a>
             </div>
         </div>
