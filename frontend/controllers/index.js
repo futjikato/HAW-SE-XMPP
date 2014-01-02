@@ -4,15 +4,34 @@ xmpp.controller('indexController', ['$scope', 'utils', 'xmpp', function ($scope,
     $scope.left = 'views/leftside.html';
     $scope.right = 'views/rightside.html';
 
-//    $scope.myName = xmpp.getUsername();
-    $scope.myName = 'Vince';
-    $scope.contacts = xmpp.getUserlist();
+    // assign username to view
+    try {
+        $scope.myName = xmpp.getUsername();
+    } catch(e) {
+        //todo handle error and show some info to the user
+        console.error(e);
+    }
+
+    // assign contact list to view
+    try {
+        $scope.contacts = xmpp.getUserlist();;
+    } catch(e) {
+        //todo handle error and show some info to the user
+        console.error(e);
+    }
+
+    // get XmppAPI class
+    var api = xmpp.getApi();
 
     // show badge in contact list on new message
-    xmpp.on('message', function(message) {
-        utils.findById($scope.contacts, message.from).unread += 1;
+    api.on('message', function() {
+        var messages = api.getNewMessages();
+        messages.forEach(function(i, message) {
+            utils.findById($scope.contacts, message.from).unread += 1;
+        });
         $scope.$apply();
     });
+    // todo if page goes away YOU NEED TO DETACH FROM THE EVENT-EMITTER !!!!!!!!!!!!!
 
     $scope.addContact = function(newContactJid) {
         xmpp.addContact(newContactJid);
@@ -27,42 +46,17 @@ xmpp.controller('indexController', ['$scope', 'utils', 'xmpp', function ($scope,
         xmpp.setStatus({show:'dnd'});
     };
 
-    $scope.contacts = [
-        {
-            jid: 1,
-            name: 'Torben',
-            online: true,
-            unread: 1
-        },
-        {
-            jid: 2,
-            name: 'Vince',
-            online: true,
-            unread: 5
-        },
-        {
-            jid: 3,
-            name: 'André',
-            online: false,
-            unread: 0
-        },
-        {
-            jid: 4,
-            name: 'Tobias',
-            online: true,
-            unread: 0
-        },
-        {
-            jid: 5,
-            name: 'Michael',
-            online: false,
-            unread: 0
-        },
-        {
-            jid: 6,
-            name: 'Moritz',
-            online: true,
-            unread: 0
-        }
-    ];
+    // add dummy contacts
+    $scope.contacts.push({
+        jid: 1,
+        name: 'Torben',
+        online: true,
+        unread: 1
+    });
+    $scope.contacts.push({
+        jid: 2,
+        name: 'Vincent',
+        online: false,
+        unread: 100
+    });
 }]);

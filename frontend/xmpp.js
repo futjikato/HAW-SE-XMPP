@@ -13,12 +13,32 @@ xmpp.factory('xmpp', function() {
             user: user,
             password: password,
             // @todo port can be passed optional ... may include in frontend ?
-            callback: function(ok) {
-                callback(ok);
+            callback: function() {
+                callback();
             }
         };
 
         api = new Api(creationOps);
+
+        return api;
+    };
+
+    service.getApi = function() {
+        return api;
+    };
+
+    service.getUserlist = function() {
+        if(!api)
+            throw new Error("Api not initialized.");
+
+        return api.getUserlist();
+    };
+
+    service.getUsername = function() {
+        if(!api)
+            throw new Error("Api not initialized.");
+
+        return api.getUsername();
     };
 
     return service;

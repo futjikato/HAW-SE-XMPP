@@ -2,10 +2,19 @@
  * @authors     Tobias Heitmann <tobias.heitmann@haw-hamburg.de>
  */
 
-var XmppIM = require('./XmppIM');
+var XmppIM = require('./XmppIM'),
+    events = require('events'),
+    util = require('util');
 
 /**
  * Initializes a new instance of the XmppIM class and also registers an observer to notify about any changes.
+ * Because the frontend may currently not listens for some events we just inform about new data the frontend must get the data manually!
+ *
+ * Events:
+ * - `message`
+ *      Informs about a new message. The message can then be retrieved by calling `getNewMessages()`
+ * - `error`
+ *      Informs about a new error. The message can then be retrieved by calling `getLatestErrors()`
  *
  * @param opts
  *  A set of options, some of which are required (all options except the 'callback' are for the XmppCore):
@@ -19,29 +28,50 @@ var XmppIM = require('./XmppIM');
  */
 
 function XmppAPI(opts){
+    events.EventEmitter.call(this);
+
     var xmppIM = new XmppIM(opts);
     var observer = opts.callback;
 
-    this.username;
-    this.userlist;
+    this.username = "UNKNOWN";
+    this.userlist = [];
+
+    this.errors = [];
+    this.messages = [];
 
     // that is instance of API
     var that = this;
 
     xmppIM.on('ready', function(info){
-        // save roster
-        that.userlist = info.roster;
+        // prepare roster
+        info.roster.forEach(function(contact) {
+            that.userlist.push({
+                jid: contact.jid,
+                name: (contact.name ? contact.name : (contact.jid.split("@")[0])),
+                online: false, // todo get contact status and update later
+                unread: 0 // todo get unread messages and update later
+            });
+        });
         // save username
         that.username = info.jid.split("@")[0];
         // inform frontend about success
-        observer(true);
+        observer();
     }).on('status', function(who, status){
 
     }).on('message', function(message){
-
+        // safe message oin the message stack
+        that.messages.push(message);
+        // inform may listening frontend
+        that.emit("message");
     }).on('error', function(error){
-        // @todo provide method to bubble to frontend somehow ( maaaaagic )
-        console.log(error);
+        // DEBUG output
+        console.error(error);
+
+        // stack error so it can be retrieved by frontend
+        that.errors.push(error);
+
+        // inform frontend
+        that.emit("error");
     }).on('authorize', function(request){
 
     }).on('authorized', function(jid){
@@ -51,6 +81,7 @@ function XmppAPI(opts){
     });
 }
 
+util.inherits(XmppAPI, events.EventEmitter);
 var proto = XmppAPI.prototype;
 
 
@@ -89,6 +120,22 @@ proto.sendMessage = function(to, msg){
 
 proto.getUsername = function() {
     return this.username;
+};
+
+proto.getUserlist = function() {
+    return this.userlist;
+};
+
+proto.getLatestErrors = function() {
+    var tmpStack = this.errors;
+    this.errors = [];
+    return tmpStack;
+};
+
+proto.getNewMessages = function() {
+    var tmpStack = this.messages;
+    this.messages = [];
+    return tmpStack;
 };
 
 // expose API
