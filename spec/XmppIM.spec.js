@@ -81,7 +81,7 @@ describe("sendMessage", function() {
     it("should work", function(done) {
         im.sendMessage("localhost", "Just a Test");
 
-        assert.equal(core._assertions.length, 3);
+        assert.equal(core._assertions.length, 4);
 
         done();
     })
@@ -91,7 +91,7 @@ describe("setStatus", function() {
     it("should work", function(done) {
         im.setStatus("under Test");
 
-        assert.equal(core._assertions.length, 4);
+        assert.equal(core._assertions.length, 5);
 
         done();
     })
