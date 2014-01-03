@@ -16,7 +16,11 @@
     "extend": "1.2.1",
     "sax": "0.5.5",
     "json2xml": "0.1.1",
-    "starttls": "0.2.1"
+    "starttls": "0.2.1",
+    "winston": "0.7.2"
+  },
+  "devDependencies": {
+    "mocha": "1.14.0 "
   },
   "author": "",
   "license": "BSD",

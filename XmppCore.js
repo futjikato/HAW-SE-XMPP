@@ -10,6 +10,7 @@
 var net = require('net');
 var events = require('events');
 var sasl = require('./sasl/sasl');
+var logger = require('./Logger');
 var XmlParser = require('./XmlParser');
 
 /**
@@ -73,7 +74,7 @@ function XmppCore(opts) {
 	this._iqHandler = {};
 	
 	if(opts.autoConnect === true)
-		this._init();	
+		this._init();
 }
 
 /**
@@ -194,32 +195,34 @@ proto.presence = function(attr, o) {
  *  Nothing.
  */
 proto._init = function() {
-	this._debugPrint('Connecting to ' + this._opts.host + ' on port ' +
-			this._opts.port);	
-	var sock = net.connect(this._opts);
-	var that = this;
-	this._sock = sock;
-	this._xml = null;
-	sock.once('connect', function() {
-		if(that._debug === true)
-			sock.pipe(process.stdout);
-		that._xml = new XmlParser(sock);
-		// Install handlers for stream-level errors and stanzas.
-		that._xml.on_('stream:error', that, that._error)
-		         .on_('iq', that, that._onIqStanza)
-		         .on_('message', that, that._onMessageStanza)
-		         .on_('presence', that, that._onPresenceStanza);
-		
-		that._setupConnection.call(that);
-		that.once('_ready', function() {
-			that._debugPrint('XML stream is ready.');
-			// Emit 'ready' event which is part of the public API.
-			that.emit('ready');
-		});
-	});
-	sock.on('error', function(e) {
-		that.emit('error', e);
-	});
+    // save scope of XmppCore
+    var that = this;
+
+    // connect to server
+    logger.info('Connecting to ' + that._opts.host + ' on port ' + that._opts.port);
+    var sock = net.connect(that._opts);
+    that._sock = sock;
+    that._xml = null;
+    sock.once('connect', function() {
+        if(that._debug === true)
+            sock.pipe(process.stdout);
+        that._xml = new XmlParser(sock);
+        // Install handlers for stream-level errors and stanzas.
+        that._xml.on_('stream:error', that, that._error)
+            .on_('iq', that, that._onIqStanza)
+            .on_('message', that, that._onMessageStanza)
+            .on_('presence', that, that._onPresenceStanza);
+
+        that._setupConnection.call(that);
+        that.once('_ready', function() {
+            that._debugPrint('XML stream is ready.');
+            // Emit 'ready' event which is part of the public API.
+            that.emit('ready');
+        });
+    });
+    sock.on('error', function(e) {
+        that.emit('error', e);
+    });
 };
 
 /**
@@ -696,8 +699,7 @@ proto._error = function(reason) {
  * Prints the specified data to standard output if debugging is enabled.
  */
 proto._debugPrint = function(s) {
-	if(this._debug === true)
-		console.log(s);
+    logger.info(s);
 };
 
 module.exports = XmppCore;
