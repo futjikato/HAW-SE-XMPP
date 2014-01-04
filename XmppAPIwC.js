@@ -1,5 +1,7 @@
 /**
  * @authors     Tobias Heitmann <tobias.heitmann@haw-hamburg.de>
+ *
+ * It's important to mention that everytime this API emits an event all parameter that are linked to a person are without the serverpart of the jid, to get this call getSername on your API object.
  */
 
 var XmppIM = require('./XmppIM');
@@ -55,8 +57,6 @@ function XmppAPIwC(opts){
 
         observer.handleMessage(user, message);
     }).on('error', function(error){
-        // @todo provide method to bubble to frontend somehow ( maaaaagic )
-        console.log(error);
         observer.handleError(error);
     }).on('authorize', function(request){
         var user = request.from.split("@")[0];
@@ -105,17 +105,21 @@ proto.sendMessage = function(to, msg){
     XmppIM.sendMessage(to, msg);
 };
 
+proto.getServername = function(){
+    return this.servername;
+};
+
 proto.getUsername = function() {
     return this.username;
 };
 
 proto.getUserlist = function() {
     return this.userlist;
-}
+};
 
 proto.setStatus = function(o) {
     XmppIM.setStatus(o);
-}
+};
 
 // expose API
 module.exports = XmppAPIwC;

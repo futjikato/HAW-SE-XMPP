@@ -1,7 +1,10 @@
 /**
  * @authors     Tobias Heitmann <tobias.heitmann@haw-hamburg.de>
+ *
+ * It's important to mention that everytime this API emits an event all parameter that are linked to a person are without the serverpart of the jid, to get this call getSername on your API object.
  */
 
+var events = require('events');
 var XmppIM = require('./XmppIM');
 
 /**
@@ -9,13 +12,23 @@ var XmppIM = require('./XmppIM');
  *
  * @param opts
  *  A set of options, some of which are required (all options except the 'callback' are for the XmppCore):
- *   'callback'  the observer to notify.
+ *   'callback'  the observer to notify that the API is ready is only used for the login process all other events occurring are processed via emitting events.
+ *              This observer will be called with the parameter 'true'.
  *   'host'      specifies the hostname of the XMPP server.
  *   'user'      the local part of the jid to connect with.
  *   'password'  the password for the respective jid.
  *  optional:
  *   'port'      the port on which to connect. Defaults to 5222,
  *               if not specified.
+ *
+ *  This Version of the API emits events which are:
+ *
+ *      'status' (who, status)                      One of the users contacts (who) changed it's status.
+ *      'message' (who, message)                    A message from (who) arrived
+ *      'error' (error)                             An error occurred
+ *      'contactRequest' (from, request)            Someone (from) requested you to add him to your contactlist.
+ *      'contactRequestResponse' (from, positive)   You recieved an answer to your contactrequest.
+ *                                                  You requested (from) and positive is a boolean and is true if you got accepted and false if not.
  */
 
 function XmppAPIwE(opts){
@@ -37,18 +50,23 @@ function XmppAPIwE(opts){
         observer(true);
     }).on('status', function(who, status){
 
-        }).on('message', function(message){
+        that.emit('status', who.split("@")[0], status);
+    }).on('message', function(message){
 
-        }).on('error', function(error){
-            // @todo provide method to bubble to frontend somehow ( maaaaagic )
-            console.log(error);
-        }).on('authorize', function(request){
+        that.emit('message', message.from.split("@")[0], message);
+    }).on('error', function(error){
 
-        }).on('authorized', function(jid){
+        that.emit('error', error);
+    }).on('authorize', function(request){
 
-        }).on('refused', function(jid){
+        that.emit('contactRequest', request.from.split("@")[0], request);
+    }).on('authorized', function(jid){
 
-        });
+        that.emit('contactRequestResponse', jid.split("@")[0], true);
+    }).on('refused', function(jid){
+
+        that.emit('contactRequestResponse', jid.split("@")[0], false);
+    });
 }
 
 var proto = XmppAPIwE.prototype;
@@ -89,6 +107,18 @@ proto.sendMessage = function(to, msg){
 
 proto.getUsername = function() {
     return this.username;
+};
+
+proto.getUserlist = function() {
+    return this.userlist;
+};
+
+proto.getServername = function(){
+    return this.servername;
+};
+
+proto.setStatus = function(o) {
+    XmppIM.setStatus(o);
 };
 
 // expose API
