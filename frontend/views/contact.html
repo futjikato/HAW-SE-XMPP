@@ -16,17 +16,17 @@
                 <!--Eine Nachricht besteht aus username, chatMessage und time -->
                 <div ng-repeat="message in messages | reverse">
                     <div class="col-sm-2">
-                        <span class="user1">{{message.jid}}</span>
+                        <span class="message-user1">{{message.jid}}</span>
                     </div>
                     <div class="col-sm-8">
 
-                        <p>
+                        <p class="message-body">
                             {{message.body}}
                         </p>
 
                     </div>
                     <div class="col-sm-2">
-                        <span class="time">time</span>
+                        <span class="message-time">time</span>
                     </div>
                     <br>
                     </br>

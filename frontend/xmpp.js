@@ -39,5 +39,19 @@ xmpp.factory('xmpp', function() {
         return api.getUsername();
     };
 
+    service.getMessages = function(jid) {
+        if(!api)
+            throw new Error("Api not initialized.");
+
+        return api.getMessages(jid);
+    };
+
+    service.sendMessage = function(to, msg) {
+        if(!api)
+            throw new Error("Api not initialized.");
+
+        return api.sendMessage(to, msg);
+    };
+
     return service;
 });

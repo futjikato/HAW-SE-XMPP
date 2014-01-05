@@ -4,9 +4,13 @@ xmpp.controller('loginController', ['$scope', '$state', 'xmpp',  function ($scop
     var api;
     $scope.errors = [];
     var errorCallback = function(error) {
-        $scope.errors.push(JSON.stringify(error.error));
+        $scope.errors.push(error);
         $scope.$apply();
     };
+
+    $scope.domain = 'twattle.net';
+    $scope.user = 'twat20';
+    $scope.password = 'twat20';
 
     $scope.login = function() {
         $scope.errors = [];
@@ -14,6 +18,6 @@ xmpp.controller('loginController', ['$scope', '$state', 'xmpp',  function ($scop
             $state.go('main.index');
         });
 
-        api.once('error', errorCallback);
+        api.on('error', errorCallback);
     };
 }]);
