@@ -7,7 +7,7 @@ xmpp.controller('mainController', ['$rootScope', '$scope', 'xmpp', function ($ro
 
 
     win.on('close', function() {
-        xmpp.logout();
+        xmpp.getApi().logout();
         this.close(true);
     });
     $scope.close = function() {

@@ -43,8 +43,9 @@
             <div class="list-group">
                 <a class="list-group-item" ui-sref="main.index.contact({contactJid:contact.jid})" ng-repeat="contact in contacts | orderBy:['-online', 'jid']">
                     <span ng-show="contact.unread" class="badge">{{contact.unread}}</span>
-                    <span ng-switch on="contact.online">
-                        <span ng-switch-when="true" class="glyphicon glyphicon-ok-sign"></span>
+                    <span ng-switch on="contact.status">
+                        <span ng-switch-when="chat" class="glyphicon glyphicon-ok-sign"></span>
+                        <span ng-switch-when="dnd" class="glyphicon glyphicon glyphicon-ban-circle"></span>
                         <span ng-switch-default class="glyphicon glyphicon-question-sign"></span>
                     </span>
                     {{contact.name}}

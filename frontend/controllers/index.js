@@ -5,20 +5,10 @@ xmpp.controller('indexController', ['$scope', 'utils', 'xmpp', function ($scope,
     $scope.right = 'views/rightside.html';
 
     // assign username to view
-    try {
-        $scope.myName = xmpp.getUsername();
-    } catch(e) {
-        //todo handle error and show some info to the user
-        console.error(e);
-    }
+    $scope.myName = xmpp.getUsername();
 
     // assign contact list to view
-    try {
-        $scope.contacts = xmpp.getUserlist();;
-    } catch(e) {
-        //todo handle error and show some info to the user
-        console.error(e);
-    }
+    $scope.contacts = xmpp.getUserlist();
 
     // get XmppAPI class
     var api = xmpp.getApi();
@@ -31,11 +21,13 @@ xmpp.controller('indexController', ['$scope', 'utils', 'xmpp', function ($scope,
         });
         $scope.$apply();
     });
-    // todo if page goes away YOU NEED TO DETACH FROM THE EVENT-EMITTER !!!!!!!!!!!!!
+
+    api.on('status', function(who, status) {
+        utils.findById($scope.contacts, who).status = status.show;
+    });
 
     $scope.addContact = function(newContactJid) {
         xmpp.addContact(newContactJid);
-        console.log(newContactJid);
     };
 
     $scope.setOnline = function() {
@@ -50,13 +42,13 @@ xmpp.controller('indexController', ['$scope', 'utils', 'xmpp', function ($scope,
     $scope.contacts.push({
         jid: 1,
         name: 'Torben',
-        online: true,
+        status: 'chat',
         unread: 1
     });
     $scope.contacts.push({
         jid: 2,
         name: 'Vincent',
-        online: false,
+        status: 'dnd',
         unread: 100
     });
 }]);

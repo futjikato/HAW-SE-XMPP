@@ -5,9 +5,7 @@ xmpp.factory('xmpp', function() {
     var service = {},
         api;
 
-    console.log('xmpp schnittstelle init');
-
-    service.login = function(user, password, domain, ressource, callback) {
+    service.login = function(user, password, domain, callback) {
         var creationOps = {
             host: domain,
             user: user,

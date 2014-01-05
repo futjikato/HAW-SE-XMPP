@@ -1,20 +1,19 @@
 var xmpp = angular.module('xmpp');
 
 xmpp.controller('loginController', ['$scope', '$state', 'xmpp',  function ($scope, $state, xmpp) {
+    var api;
+    $scope.errors = [];
+    var errorCallback = function(error) {
+        $scope.errors.push(JSON.stringify(error.error));
+        $scope.$apply();
+    };
+
     $scope.login = function() {
-        var api = xmpp.login($scope.user, $scope.password, $scope.domain, $scope.ressource, function() {
+        $scope.errors = [];
+        api = xmpp.login($scope.user, $scope.password, $scope.domain, function() {
             $state.go('main.index');
         });
 
-        // todo show errors somewhere
-        $scope.errors = [];
-        api.on("error", function() {
-            var newErrors = api.getLatestErrors();
-            newErrors.forEach(function(i, error) {
-                $scope.errors.push(error);
-            });
-            $scope.$apply();
-        });
-        // todo if page goes away YOU NEED TO DETACH FROM THE EVENT-EMITTER !!!!!!!!!!!!!
+        api.once('error', errorCallback);
     };
 }]);

@@ -4,6 +4,8 @@ xmpp.controller('contactController', ['$scope', '$stateParams', 'utils', 'xmpp',
     $scope.contact = utils.findById($scope.contacts, $stateParams.contactJid);
     $scope.messages = xmpp.getMessages($stateParams.contactJid);
 
+    $scope.contact.unread = 0;
+
     $scope.messages = [
         {
             jid: 'a@a.a',
@@ -63,8 +65,13 @@ xmpp.controller('contactController', ['$scope', '$stateParams', 'utils', 'xmpp',
         }
     ];
 
-    xmpp.on('message', function(message) {
-        $scope.messages.push(message);
+    var api = xmpp.getApi();
+
+    api.on('message', function(from, message) {
+        $scope.messages.push({
+            jid: from,
+            body: message.body
+        });
         $scope.$apply();
     });
 
