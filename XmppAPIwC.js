@@ -39,6 +39,8 @@ function XmppAPIwC(opts){
     // that is instance of API
     var that = this;
 
+
+
     xmppIM.on('ready', function(info){
         // save roster
         that.userlist = info.roster;
