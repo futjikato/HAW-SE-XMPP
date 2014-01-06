@@ -26,7 +26,7 @@ var logger = new (winston.Logger)({
             timestamp: true
         }),
         new (winston.transports.File)({
-            filename: './Core.log',
+            filename: (process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE) + "/.xmppchat.core.log",
             handleExceptions : true,
             json : true,
             timestamp: true,
