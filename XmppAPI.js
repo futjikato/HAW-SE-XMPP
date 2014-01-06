@@ -73,8 +73,12 @@ function XmppAPI(opts){
     }).on('status', function(who, status){
             // safe statuschanges on the message stack
             that._statuschanges.push({who: who, status: status, time: Date.now()});
+            // chop of resource
+            if(who.indexOf('/') !== -1) {
+                var strippedWho = who.substr(0, who.indexOf('/') - 1);
+            }
             // inform frontend about statuschange
-            that.emit('status', who, status);
+            that.emit('status', strippedWho, status);
 
         }).on('message', function(message){
             // safe message on the message stack
