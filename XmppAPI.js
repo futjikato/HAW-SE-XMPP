@@ -151,7 +151,7 @@ var proto = XmppAPI.prototype;
  */
 proto.sendMessage = function(to, msg){
     try {
-        this._messages.push({from: this.getUsername(), body: msg, time: Date.now()});
+        this._messages.push({from: this.getUsername(), msg: msg, time: Date.now()});
         this.im.sendMessage(to, msg);
     } catch(e) {
         console.log(e);
@@ -243,7 +243,7 @@ proto.getMessages = function(jid){
             strippedWho = message.from.substr(0, message.from.indexOf('/'));
         }
         if(strippedWho == jid || message.from == that.getUsername()){
-            that._tmpStack.push({jid: strippedWho, body: message.message.body, time: message.time});
+            that._tmpStack.push({jid: strippedWho, body: (message.msg ? message.msg : message.message.body), time: message.time});
         }
     });
     return this._tmpStack;
