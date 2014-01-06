@@ -26,7 +26,7 @@ var logger = new (winston.Logger)({
             timestamp: true
         }),
         new (winston.transports.File)({
-            filename: './../logs/Core.log',
+            filename: './Core.log',
             handleExceptions : true,
             json : true,
             timestamp: true,
