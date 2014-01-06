@@ -81,13 +81,13 @@ function XmppAPI(opts){
             that.emit('status', strippedWho, status);
 
         }).on('message', function(message){
-            // safe message on the message stack
-            that._messages.push({message: message, from: message.from, time: Date.now()});
             // chop of resource
             var strippedFrom = message.from;
             if(strippedFrom.indexOf('/') !== -1) {
                 strippedFrom = strippedFrom.substr(0, strippedFrom.indexOf('/'));
             }
+            // safe message on the message stack
+            that._messages.push({message: message, from: strippedFrom, time: Date.now()});
             // emit message event
             that.emit('message', strippedFrom, message);
 
@@ -245,6 +245,10 @@ proto.getMessages = function(jid){
         }
     });
     return this._tmpStack;
+};
+
+proto.removeListener = function(event){
+    this.removeAllListeners(event);
 };
 
 
