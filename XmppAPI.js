@@ -234,6 +234,7 @@ proto.getLatestErrors = function() {
  *  'message' is the messageobject. It is an object made up of the properties 'from' which contains the JID of the sender of the message, 'type' which contains the type of the message and the fields 'subject' and 'body' which contain the subject and body of the message, respectively.
  */
 proto.getMessages = function(jid){
+    var that = this;
     this._tmpStack = [];
     this._messages.forEach(function(message){
         var strippedWho = message.from;
