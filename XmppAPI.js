@@ -195,7 +195,17 @@ proto.getContactRequests = function(){
     return tmpStack;
 };
 
+proto.addContact = function(jid, item){
+    this.im.addContact(jid, item);
+};
 
+proto.removeContact = function(jid){
+    this.im.removeContact(jid);
+};
+
+proto.logout = function(){
+    this.im.close();
+};
 /**
  * This returns all errors, that occured since the last call of this function.
  *
