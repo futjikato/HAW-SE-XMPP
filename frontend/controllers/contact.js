@@ -9,65 +9,6 @@ xmpp.controller('contactController', ['$scope', '$stateParams', 'utils', 'xmpp',
 
     $scope.contact.unread = 0;
 
-    $scope.messages = [
-        {
-            jid: 'a@a.a',
-            body: 'test'
-        },
-        {
-            jid: 'a@a.a',
-            body: 'test'
-        },
-        {
-            jid: 'a@a.a',
-            body: 'test'
-        },
-        {
-            jid: 'a@a.a',
-            body: 'test'
-        },
-        {
-            jid: 'a@a.a',
-            body: 'test'
-        },
-        {
-            jid: 'a@a.a',
-            body: 'test'
-        },
-        {
-            jid: 'a@a.a',
-            body: 'test'
-        },
-        {
-            jid: 'a@a.a',
-            body: 'test'
-        },
-        {
-            jid: 'a@a.a',
-            body: 'test'
-        },
-        {
-            jid: 'a@a.a',
-            body: 'test'
-        },
-        {
-            jid: 'a@a.a',
-            body: 'test'
-        },
-        {
-            jid: 'a@a.a',
-            body: 'test'
-        },
-        {
-            jid: 'a@a.a',
-            body: 'test'
-        },
-        {
-            jid: 'a@a.a',
-            body: 'test'
-        }
-    ];
-
     if (!init) {
         init = true;
         var api = xmpp.getApi();
