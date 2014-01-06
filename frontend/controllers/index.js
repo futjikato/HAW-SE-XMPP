@@ -23,7 +23,11 @@ xmpp.controller('indexController', ['$scope', 'utils', 'xmpp', function ($scope,
     });
 
     api.on('status', function(who, status) {
-        utils.findById($scope.contacts, who).status = status.show;
+        var newStatus = 'offline';
+        if (status.available) {
+            newStatus = 'chat';
+        }
+        utils.findById($scope.contacts, who).status = newStatus;
     });
 
     $scope.addContact = function(newContactJid) {
