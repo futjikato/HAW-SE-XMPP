@@ -241,7 +241,7 @@ proto.getMessages = function(jid){
             strippedWho = message.from.substr(0, message.from.indexOf('/'));
         }
         if(strippedWho == jid){
-            that._tmpStack.push({message: message.message, time: message.time});
+            that._tmpStack.push({from: strippedWho, message: message.message, time: message.time});
         }
     });
     return this._tmpStack;
