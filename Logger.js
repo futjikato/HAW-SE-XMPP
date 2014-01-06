@@ -1,3 +1,5 @@
+var winston = require('winston');
+
 /**
  * @authors     Moritz Spindelhirn <moritz.spindelhirn@haw-hamburg.de>
  * @date        03-12-13
