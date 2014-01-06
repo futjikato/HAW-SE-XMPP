@@ -18,7 +18,7 @@ xmpp.controller('contactController', ['$scope', '$stateParams', 'utils', 'xmpp',
         $scope.messages.push({
             jid: from,
             body: message.body,
-            time: message.time
+            time: Date.now()
         });
         $scope.$apply();
     });
@@ -27,7 +27,8 @@ xmpp.controller('contactController', ['$scope', '$stateParams', 'utils', 'xmpp',
         xmpp.sendMessage($scope.contact.jid, $scope.msg);
         $scope.messages.push({
             jid: xmpp.getUsername(),
-            body: $scope.msg
+            body: $scope.msg,
+            time: Date.now()
         });
         $scope.msg = '';
     };
