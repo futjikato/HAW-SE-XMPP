@@ -31,7 +31,7 @@ var XmppIM = require('./XmppIM');
  *                                                  You requested (from) and positive is a boolean and is true if you got accepted and false if not.
  */
 
-function XmppAPI(opts){
+function XmppAPIwE(opts){
     events.EventEmitter.call(this);
 
     var xmppIM = new XmppIM(opts);
@@ -65,50 +65,50 @@ function XmppAPI(opts){
         that.username = info.jid.split("@")[0];
         //save servername
         that.servername = info.jid.split("@")[1];
-        info.roster[0];
+        info.roster[0].
         // inform frontend about success
         observer();
 
     }).on('status', function(who, status){
-            // safe statuschanges on the message stack
-            that._statuschanges.push({who: who, status: status, time: Date.now()});
-            // inform frontend about statuschange
-            that.emit('status', who, status);
+        // safe statuschanges on the message stack
+        that._statuschanges.push({who: who, status: status, time: Date.now()});
+        // inform frontend about statuschange
+        that.emit('status', who, status);
 
-        }).on('message', function(message){
-            // safe message on the message stack
-            that._messages.push({message: message, from: message.from, time: Date.now()});
-            // emit message event
-            that.emit('message', message.from, message);
+    }).on('message', function(message){
+        // safe message on the message stack
+        that._messages.push({message: message, from: message.from, time: Date.now()});
+        // emit message event
+        that.emit('message', message.from, message);
 
-        }).on('error', function(error){
-            // save errors on the error stack
-            that._errors.push({error: error, time: Date.now()});
-            // emit error event
-            that.emit('error', error);
+    }).on('error', function(error){
+        // save errors on the error stack
+        that._errors.push({error: error, time: Date.now()});
+        // emit error event
+        that.emit('error', error);
 
-        }).on('authorize', function(request){
-            // save contactrequests on the contactR stack
-            that._contactR.push({from: request.from, request: request, time: Date.now()});
-            // emit contactRequest event
-            that.emit('contactRequest', request.from, request);
+    }).on('authorize', function(request){
+        // save contactrequests on the contactR stack
+        that._contactR.push({from: request.from, request: request, time: Date.now()});
+        // emit contactRequest event
+        that.emit('contactRequest', request.from, request);
 
-        }).on('authorized', function(jid){
-            // save contactRequestResponses on the contactReRe stack
-            that._contactReRe.push({from: jid, time: Date.now(), accepted: true});
-            // emit contactRequestResponse event
-            that.emit('contactRequestResponse', jid, true);
+    }).on('authorized', function(jid){
+        // save contactRequestResponses on the contactReRe stack
+        that._contactReRe.push({from: jid, time: Date.now(), accepted: true});
+        // emit contactRequestResponse event
+        that.emit('contactRequestResponse', jid, true);
 
-        }).on('refused', function(jid){
-            // save contactRequestResponses on the contactReRe stack
-            that._contactReRe.push({from: jid, time: Date.now(), accepted: false});
-            // emit contactRequestResponse event
-            that.emit('contactRequestResponse', jid, false);
-        });
+    }).on('refused', function(jid){
+        // save contactRequestResponses on the contactReRe stack
+        that._contactReRe.push({from: jid, time: Date.now(), accepted: false});
+        // emit contactRequestResponse event
+        that.emit('contactRequestResponse', jid, false);
+    });
 }
 
-require('util').inherits(XmppAPI, events.EventEmitter);
-var proto = XmppAPI.prototype;
+var proto = XmppAPIwE.prototype;
+
 
 /**
  * Hands a massage over to the XmppIM class
@@ -249,4 +249,4 @@ proto.getStatusChanges = function(jid){
 };
 
 // expose API
-module.exports = XmppAPI;
+module.exports = XmppAPIwE;
