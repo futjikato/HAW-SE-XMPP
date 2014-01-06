@@ -12,6 +12,7 @@ installed with **npm**:
  * json2xml	(npm install json2xml)
  * extend	(npm install extend)
  * starttls	(npm install starttls)
+ * winston  (npm install winston)
  
 The module exports a single class which can be referenced by simply
 requiring *XmppIm*.
