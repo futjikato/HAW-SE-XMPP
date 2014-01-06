@@ -35,6 +35,7 @@ function XmppAPI(opts){
     events.EventEmitter.call(this);
 
     var xmppIM = new XmppIM(opts);
+    this.im = xmppIM;
     var observer = opts.callback;
 
     this.username = "UNKNOWN";
@@ -140,7 +141,11 @@ var proto = XmppAPI.prototype;
  *  arguments fields or values are invalid.
  */
 proto.sendMessage = function(to, msg){
-    XmppIM.sendMessage(to, msg);
+    try {
+        this.im.sendMessage(to, msg);
+    } catch(e) {
+        console.log(e);
+    }
 };
 
 proto.getUsername = function() {
