@@ -20,7 +20,8 @@ xmpp.controller('contactController', ['$scope', '$stateParams', 'utils', 'xmpp',
 
             $scope.messages.push({
                 jid: from,
-                body: message.body
+                body: message.body,
+                time: message.time
             });
             $scope.$apply();
         });
