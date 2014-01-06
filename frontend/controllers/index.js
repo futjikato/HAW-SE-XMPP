@@ -14,11 +14,8 @@ xmpp.controller('indexController', ['$scope', 'utils', 'xmpp', function ($scope,
     var api = xmpp.getApi();
 
     // show badge in contact list on new message
-    api.on('message', function() {
-        var messages = api.getNewMessages();
-        messages.forEach(function(i, message) {
-            utils.findById($scope.contacts, message.from).unread += 1;
-        });
+    api.on('message', function(from, message) {
+        utils.findById($scope.contacts, from).unread += 1;
         $scope.$apply();
     });
 
