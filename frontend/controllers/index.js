@@ -37,18 +37,4 @@ xmpp.controller('indexController', ['$scope', 'utils', 'xmpp', function ($scope,
     $scope.setDnd = function() {
         xmpp.setStatus({show:'dnd'});
     };
-
-    // add dummy contacts
-    $scope.contacts.push({
-        jid: 1,
-        name: 'Torben',
-        status: 'chat',
-        unread: 1
-    });
-    $scope.contacts.push({
-        jid: 2,
-        name: 'Vincent',
-        status: 'dnd',
-        unread: 100
-    });
 }]);
