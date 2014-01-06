@@ -235,7 +235,7 @@ proto.getLatestErrors = function() {
  */
 proto.getMessages = function(jid){
     this._tmpStack = [];
-    this._errors.forEach(function(message){
+    this._messages.forEach(function(message){
         var strippedWho = message.from;
         if(message.from.indexOf('/') !== -1) {
             strippedWho = message.from.substr(0, message.from.indexOf('/'));
