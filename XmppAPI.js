@@ -75,7 +75,7 @@ function XmppAPI(opts){
             that._statuschanges.push({who: who, status: status, time: Date.now()});
             // chop of resource
             if(who.indexOf('/') !== -1) {
-                var strippedWho = who.substr(0, who.indexOf('/') - 1);
+                var strippedWho = who.substr(0, who.indexOf('/'));
             }
             // inform frontend about statuschange
             that.emit('status', strippedWho, status);
