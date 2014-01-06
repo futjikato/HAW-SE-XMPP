@@ -66,7 +66,6 @@ function XmppAPI(opts){
         that.username = info.jid.split("@")[0];
         //save servername
         that.servername = info.jid.split("@")[1];
-        info.roster[0];
         // inform frontend about success
         observer();
 
@@ -237,7 +236,11 @@ proto.getLatestErrors = function() {
 proto.getMessages = function(jid){
     this._tmpStack = [];
     this._errors.forEach(function(message){
-        if(message.from == jid){
+        var strippedWho = message.from;
+        if(message.from.indexOf('/') !== -1) {
+            strippedWho = message.from.substr(0, message.from.indexOf('/'));
+        }
+        if(strippedWho == jid){
             that._tmpStack.push({message: message.message, time: message.time});
         }
     });
